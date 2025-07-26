@@ -148,12 +148,19 @@
               <input v-model.number="clienteDetalle.descuento" type="number" class="form-control" min="1" max="100" />
             </div>
             <div class="col-md-4 mb-2">
-              <label class="form-label"><b>Tipo:</b></label>
-              <select v-model="clienteDetalle.tipo" class="form-select">
-                <option value="producto">Producto</option>
-                <option value="servicio">Servicio</option>
-                <option value="paquete">Paquete</option>
-              </select>
+              <label class="form-label"><b>Tipo de promoción</b></label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editTipoProducto" value="producto" v-model="clienteDetalle.tipos" />
+                <label class="form-check-label" for="editTipoProducto">Producto</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editTipoServicio" value="servicio" v-model="clienteDetalle.tipos" />
+                <label class="form-check-label" for="editTipoServicio">Servicio</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="editTipoPaquete" value="paquete" v-model="clienteDetalle.tipos" />
+                <label class="form-check-label" for="editTipoPaquete">Paquete</label>
+              </div>
             </div>
           </div>
           <div class="text-end mt-3">
@@ -188,24 +195,47 @@ function verDetalle(cliente) {
 }
 
 function editarCliente(cliente) {
+  // Asegurarse de que tipos sea un array de los tipos activos
+  let tipos = []
+  if (cliente.producto || (cliente.tipo && cliente.tipo.includes('producto'))) tipos.push('producto')
+  if (cliente.servicio || (cliente.tipo && cliente.tipo.includes('servicio'))) tipos.push('servicio')
+  if (cliente.paquete || (cliente.tipo && cliente.tipo.includes('paquete'))) tipos.push('paquete')
   clienteDetalle.value = {
-    ...cliente
+    ...cliente,
+    tipos
   }
   editandoDetalle.value = true
 }
 
 async function guardarEdicionDetalle() {
-  if (!clienteDetalle.value.nombre || !clienteDetalle.value.descuento || !clienteDetalle.value.tipo) {
+  if (!clienteDetalle.value.nombre || !clienteDetalle.value.descuento || !clienteDetalle.value.tipos || clienteDetalle.value.tipos.length === 0) {
     await Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  const idx = clientes.value.findIndex(c => c.id === clienteDetalle.value.id)
-  if (idx !== -1) {
-    clientes.value[idx] = { ...clienteDetalle.value }
-    await Swal.fire({ icon: 'success', title: 'Promoción actualizada', showConfirmButton: false, timer: 1200 })
+  const body = {
+    nombre: clienteDetalle.value.nombre,
+    descuento: clienteDetalle.value.descuento,
+    producto: clienteDetalle.value.tipos.includes('producto'),
+    servicio: clienteDetalle.value.tipos.includes('servicio'),
+    paquete: clienteDetalle.value.tipos.includes('paquete')
   }
-  editandoDetalle.value = false
-  clienteDetalle.value = null
+  try {
+    const response = await fetch(`http://localhost:8080/backend/public/api/gym/promociones/${clienteDetalle.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo actualizar la promoción')
+    }
+    await Swal.fire({ icon: 'success', title: 'Promoción actualizada', showConfirmButton: false, timer: 1200 })
+    editandoDetalle.value = false
+    clienteDetalle.value = null
+    await cargarPromociones()
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo actualizar la promoción.' })
+  }
 }
 
 function cancelarEdicionDetalle() {
@@ -220,31 +250,44 @@ function abrirModalCliente() {
   }
 }
 
-function agregarClienteModal() {
+async function agregarClienteModal() {
   if (!nuevoCliente.value.nombre || !nuevoCliente.value.descuento || !nuevoCliente.value.tipos || nuevoCliente.value.tipos.length === 0) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  // Si selecciona más de un tipo, se crea una promoción por cada tipo
-  nuevoCliente.value.tipos.forEach(tipo => {
-    clientes.value.push({
-      id: clientes.value.length ? Math.max(...clientes.value.map(c => c.id)) + 1 : 1,
-      nombre: nuevoCliente.value.nombre,
-      descuento: nuevoCliente.value.descuento,
-      tipo,
-      activo: true
-    })
-  })
-  Swal.fire({ icon: 'success', title: 'Promoción agregada', showConfirmButton: false, timer: 1200 })
-  nuevoCliente.value = {
-    nombre: '',
-    descuento: '',
-    tipos: []
+  // Construir el body para el backend
+  const body = {
+    nombre: nuevoCliente.value.nombre,
+    descuento: nuevoCliente.value.descuento,
+    producto: nuevoCliente.value.tipos.includes('producto'),
+    servicio: nuevoCliente.value.tipos.includes('servicio'),
+    paquete: nuevoCliente.value.tipos.includes('paquete')
   }
-  // Cerrar modal
-  const modal = document.getElementById('modalAgregarCliente')
-  if (modal) {
-    window.bootstrap.Modal.getInstance(modal).hide()
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/promociones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo registrar la promoción')
+    }
+    Swal.fire({ icon: 'success', title: 'Promoción agregada', showConfirmButton: false, timer: 1200 })
+    nuevoCliente.value = {
+      nombre: '',
+      descuento: '',
+      tipos: []
+    }
+    // Cerrar modal
+    const modal = document.getElementById('modalAgregarCliente')
+    if (modal) {
+      window.bootstrap.Modal.getInstance(modal).hide()
+    }
+    // Refrescar la lista de promociones
+    await cargarPromociones()
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo registrar la promoción.' })
   }
 }
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -258,40 +301,38 @@ const nuevoCliente = ref({
   tipos: []
 })
 
-const clientes = ref([
-  {
-    id: 1,
-    nombre: 'Promoción de Apertura',
-    descuento: 30,
-    tipo: 'producto',
-    activo: true
-  },
-  {
-    id: 2,
-    nombre: 'Mes del Niño',
-    descuento: 20,
-    tipo: 'servicio',
-    activo: true
-  },
-  {
-    id: 3,
-    nombre: 'Mes del Amor',
-    descuento: 25,
-    tipo: 'paquete',
-    activo: false
+const clientes = ref([])
+
+async function cargarPromociones() {
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/promociones')
+    if (!response.ok) throw new Error('No se pudo obtener la lista de promociones')
+    const promociones = await response.json()
+    clientes.value = promociones.map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      descuento: p.descuento,
+      tipo: p.tipo,
+      activo: p.activo !== undefined ? !!p.activo : true
+    }))
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la lista de promociones.' })
   }
-])
+}
 
 const clientesOrdenados = computed(() => {
   let filtrados = [...clientes.value]
-  if (filtroActivo.value === 'activos') filtrados = filtrados.filter(c => c.activo)
-  else if (filtroActivo.value === 'inactivos') filtrados = filtrados.filter(c => !c.activo)
-
+  // Filtrar por estado activo/inactivo
+  if (filtroActivo.value === 'activos') {
+    filtrados = filtrados.filter(c => c.activo === true)
+  } else if (filtroActivo.value === 'inactivos') {
+    filtrados = filtrados.filter(c => c.activo === false)
+  }
+  // Filtro de búsqueda
   if (terminoBusqueda.value.trim()) {
     const termino = terminoBusqueda.value.toLowerCase()
     filtrados = filtrados.filter(c =>
-      c.nombre.toLowerCase().includes(termino) ||
-      c.telefono.includes(termino)
+      c.nombre.toLowerCase().includes(termino)
     )
   }
   return filtrados
@@ -327,24 +368,47 @@ const agregarCliente = () => {
 
 function eliminarCliente(id) {
   Swal.fire({
-    title: '¿Seguro que deseas eliminar este cliente?',
+    title: '¿Seguro que deseas desactivar esta promoción?',
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
+    confirmButtonText: 'Sí, desactivar',
     cancelButtonText: 'Cancelar',
     reverseButtons: true
-  }).then(result => {
+  }).then(async result => {
     if (result.isConfirmed) {
-      clientes.value = clientes.value.filter(c => c.id !== id)
-      // Cerrar master-detail si el cliente eliminado estaba abierto
-      if (clienteDetalle.value && clienteDetalle.value.id === id) {
-        clienteDetalle.value = null
-        editandoDetalle.value = false
+      try {
+        const response = await fetch(`http://localhost:8080/backend/public/api/gym/promociones/estado/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        const data = await response.json()
+
+        if (response.ok) {
+          // Actualizar localmente la promoción si estás usando un array llamado promociones
+          const index = clientes.value.findIndex(p => p.id === id)
+          if (index !== -1) {
+            clientes.value[index].activo = !clientes.value[index].activo
+          }
+
+          // Cerrar detalle si estaba abierto
+          if (clienteDetalle.value && clienteDetalle.value.id === id) {
+            clienteDetalle.value = null
+            editandoDetalle.value = false
+          }
+
+          Swal.fire({ icon: 'success', title: data.mensaje || 'Promoción actualizada', showConfirmButton: false, timer: 1200 })
+        } else {
+          Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo cambiar el estado de la promoción' })
+        }
+      } catch (error) {
+        Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo conectar al servidor.' })
       }
-      Swal.fire({ icon: 'success', title: 'Cliente eliminado', showConfirmButton: false, timer: 1200 })
     }
   })
 }
+
 
 const tituloLista = computed(() => {
   switch(filtroActivo.value) {
@@ -367,9 +431,11 @@ function actualizarFechaHora() {
   horaFormateada.value = ahora.toLocaleTimeString('es-MX', { hour12: false })
 }
 
+
 onMounted(() => {
   actualizarFechaHora()
   intervalo = setInterval(actualizarFechaHora, 1000)
+  cargarPromociones()
 })
 
 onUnmounted(() => {

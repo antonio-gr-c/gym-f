@@ -194,13 +194,29 @@ async function guardarEdicionDetalle() {
     await Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  const idx = clientes.value.findIndex(p => p.id === clienteDetalle.value.id)
-  if (idx !== -1) {
-    clientes.value[idx] = { ...clientes.value[idx], nombre: clienteDetalle.value.nombre, costo: clienteDetalle.value.costo, stockMinimo: clienteDetalle.value.stockMinimo, stockActual: clienteDetalle.value.stockActual }
+  try {
+    const body = {
+      nombre: clienteDetalle.value.nombre,
+      precio: clienteDetalle.value.costo, // el backend espera 'precio'
+      stock_minimo: clienteDetalle.value.stockMinimo,
+      stock_actual: clienteDetalle.value.stockActual
+    }
+    const response = await fetch(`http://localhost:8080/backend/public/api/gym/productos/${clienteDetalle.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo actualizar el producto')
+    }
     await Swal.fire({ icon: 'success', title: 'Producto actualizado', showConfirmButton: false, timer: 1200 })
+    editandoDetalle.value = false
+    clienteDetalle.value = null
+    await cargarProductos()
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo actualizar el producto.' })
   }
-  editandoDetalle.value = false
-  clienteDetalle.value = null
 }
 
 function cancelarEdicionDetalle() {
@@ -215,30 +231,43 @@ function abrirModalCliente() {
   }
 }
 
-function agregarClienteModal() {
+async function agregarClienteModal() {
   if (!nuevoCliente.value.nombre || nuevoCliente.value.costo === '' || nuevoCliente.value.costo === null || nuevoCliente.value.stockMinimo === '' || nuevoCliente.value.stockMinimo === null || nuevoCliente.value.stockActual === '' || nuevoCliente.value.stockActual === null) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  clientes.value.push({
-    id: clientes.value.length ? Math.max(...clientes.value.map(c => c.id)) + 1 : 1,
-    nombre: nuevoCliente.value.nombre,
-    costo: nuevoCliente.value.costo,
-    stockMinimo: nuevoCliente.value.stockMinimo,
-    stockActual: nuevoCliente.value.stockActual,
-    activo: true
-  })
-  Swal.fire({ icon: 'success', title: 'Producto agregado', showConfirmButton: false, timer: 1200 })
-  nuevoCliente.value = {
-    nombre: '',
-    costo: '',
-    stockMinimo: '',
-    stockActual: ''
-  }
-  // Cerrar modal
-  const modal = document.getElementById('modalAgregarCliente')
-  if (modal) {
-    window.bootstrap.Modal.getInstance(modal).hide()
+  try {
+    const body = {
+      nombre: nuevoCliente.value.nombre,
+      precio: nuevoCliente.value.costo, // el backend espera 'precio'
+      stock_minimo: nuevoCliente.value.stockMinimo,
+      stock_actual: nuevoCliente.value.stockActual
+    }
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/productos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || 'No se pudo agregar el producto')
+    }
+    Swal.fire({ icon: 'success', title: 'Producto agregado', showConfirmButton: false, timer: 1200 })
+    nuevoCliente.value = {
+      nombre: '',
+      costo: '',
+      stockMinimo: '',
+      stockActual: ''
+    }
+    // Cerrar modal
+    const modal = document.getElementById('modalAgregarCliente')
+    if (modal) {
+      window.bootstrap.Modal.getInstance(modal).hide()
+    }
+    // Refrescar la lista de productos
+    await cargarProductos()
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo agregar el producto.' })
   }
 }
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -253,18 +282,26 @@ const nuevoCliente = ref({
   stockActual: ''
 })
 
-const clientes = ref([
-  { id: 1, nombre: 'Proteína Whey', costo: 650.00, stockMinimo: 5, stockActual: 12, activo: true },
-  { id: 2, nombre: 'Guantes de gimnasio', costo: 250.00, stockMinimo: 10, stockActual: 18, activo: true },
-  { id: 3, nombre: 'Toalla deportiva', costo: 120.00, stockMinimo: 8, stockActual: 20, activo: true },
-  { id: 4, nombre: 'Cinturón de levantamiento', costo: 400.00, stockMinimo: 3, stockActual: 7, activo: true },
-  { id: 5, nombre: 'Shaker', costo: 90.00, stockMinimo: 10, stockActual: 25, activo: true },
-  { id: 6, nombre: 'Rodillera deportiva', costo: 180.00, stockMinimo: 6, stockActual: 10, activo: true },
-  { id: 7, nombre: 'Banda elástica', costo: 60.00, stockMinimo: 15, stockActual: 30, activo: true },
-  { id: 8, nombre: 'Cuerda para saltar', costo: 75.00, stockMinimo: 10, stockActual: 15, activo: true },
-  { id: 9, nombre: 'Bidón de agua', costo: 110.00, stockMinimo: 8, stockActual: 14, activo: true },
-  { id: 10, nombre: 'Calcetas deportivas', costo: 50.00, stockMinimo: 20, stockActual: 40, activo: true }
-])
+const clientes = ref([])
+
+async function cargarProductos() {
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/productos')
+    if (!response.ok) throw new Error('No se pudo obtener la lista de productos')
+    const productos = await response.json()
+    // Normalizar campos si es necesario
+    clientes.value = productos.map(p => ({
+      id: p.id_producto,
+      nombre: p.nombre,
+      costo: p.precio,
+      stockMinimo: p.stock_minimo,
+      stockActual: p.stock_actual,
+      activo: p.activo !== undefined ? !!p.activo : true
+    }))
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la lista de productos.' })
+  }
+}
 
 const clientesOrdenados = computed(() => {
   let filtrados = [...clientes.value]
@@ -309,25 +346,41 @@ const agregarCliente = () => {
   mostrarFormulario.value = true
 }
 
-function eliminarCliente(id) {
-  Swal.fire({
-    title: '¿Seguro que deseas eliminar este cliente?',
-    icon: 'warning',
+async function eliminarCliente(id) {
+  const producto = clientes.value.find(c => c.id === id)
+  if (!producto) return
+  const accion = producto.activo ? 'desactivar' : 'activar'
+  const confirmButtonText = producto.activo ? 'Sí, desactivar' : 'Sí, activar'
+  const title = producto.activo ? '¿Seguro que deseas desactivar este producto?' : '¿Seguro que deseas activar este producto?'
+  const icon = producto.activo ? 'warning' : 'question'
+  const result = await Swal.fire({
+    title,
+    icon,
     showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
+    confirmButtonText,
     cancelButtonText: 'Cancelar',
     reverseButtons: true
-  }).then(result => {
-    if (result.isConfirmed) {
-      clientes.value = clientes.value.filter(c => c.id !== id)
-      // Cerrar master-detail si el cliente eliminado estaba abierto
+  })
+  if (result.isConfirmed) {
+    try {
+      const response = await fetch(`http://localhost:8080/backend/public/api/gym/productos/estado/${id}`, {
+        method: 'PUT'
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo cambiar el estado del producto')
+      }
+      // Cerrar master-detail si el producto estaba abierto
       if (clienteDetalle.value && clienteDetalle.value.id === id) {
         clienteDetalle.value = null
         editandoDetalle.value = false
       }
-      Swal.fire({ icon: 'success', title: 'Cliente eliminado', showConfirmButton: false, timer: 1200 })
+      await cargarProductos()
+      Swal.fire({ icon: 'success', title: data.mensaje || 'Estado actualizado', showConfirmButton: false, timer: 1200 })
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo cambiar el estado del producto.' })
     }
-  })
+  }
 }
 
 const tituloLista = computed(() => {
@@ -351,9 +404,11 @@ function actualizarFechaHora() {
   horaFormateada.value = ahora.toLocaleTimeString('es-MX', { hour12: false })
 }
 
+
 onMounted(() => {
   actualizarFechaHora()
   intervalo = setInterval(actualizarFechaHora, 1000)
+  cargarProductos()
 })
 
 onUnmounted(() => {

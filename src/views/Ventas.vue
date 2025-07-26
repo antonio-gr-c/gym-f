@@ -137,7 +137,8 @@
                     <span v-else-if="item.tipo === 'paquete' && item.id >= 10">1</span>
                   </td>
                   <td class="text-center">
-                    <span v-if="item.tipo !== 'paquete' || item.id < 10">-</span>
+                    <span v-if="item.tipo !== 'paquete'">-</span>
+                    <span v-else-if="[1,2,3].includes(item.id)">-</span>
                     <input v-else type="number" min="1" class="form-control form-control-sm text-center" v-model.number="item.meses" @input="actualizarTotales" />
                   </td>
                   <td class="text-center">${{ item.precio }}</td>
@@ -154,13 +155,16 @@
                   <td class="text-center">
                     <select class="form-select form-select-sm" v-model="item.promocion" @change="aplicarPromocion(item)">
                       <option value="">Sin promoción</option>
-                      <option v-for="promo in promociones.filter(p => p.aplica.includes(item.tipo))" :key="promo.nombre" :value="promo.nombre">
+                      <option v-for="promo in promociones" :key="promo.nombre" :value="promo.nombre">
                         {{ promo.nombre }} ({{ promo.descuento }}%)
                       </option>
                     </select>
                   </td>
                   <td class="text-center">${{ calcularTotalLinea(item) }}</td>
                   <td class="text-center">
+                    <div v-if="item.tipo === 'servicio'" class="mb-1">
+                      <input type="date" class="form-control form-control-sm" v-model="item.fecha_servicio" />
+                    </div>
                     <button class="btn btn-danger btn-sm mt-1" @click="eliminarItem(idx)">
                       <i class="material-icons">delete</i>
                     </button>
@@ -444,11 +448,7 @@ export default {
 
   data() {
     return {
-      promociones: [
-        { nombre: 'Mes del amor', descuento: 10, aplica: ['producto', 'servicio', 'paquete'] },
-        { nombre: 'Mes del niño', descuento: 15, aplica: ['producto'] },
-        { nombre: 'Mes del gym', descuento: 20, aplica: ['servicio', 'paquete'] }
-      ],
+      promociones: [],
     aplicarPromocion(item) {
       const promo = this.promociones.find(p => p.nombre === item.promocion)
       if (promo) {
@@ -461,10 +461,7 @@ export default {
       busqueda: '',
       tabCatalogo: 'general',
       // clientes y selección
-      clientes: [
-        { id: 1, nombre: 'Ana Torres', telefono: '5551234567', correo: 'ana@mail.com', mascotas: [ { id: 1, nombre: 'Luna', especie: 'Perro', edad: 3, unidad_edad: 'años', raza: 'Labrador' } ] },
-        { id: 2, nombre: 'Carlos Ruiz', telefono: '5558889999', correo: 'carlos@mail.com', mascotas: [] }
-      ],
+      clientes: [],
       selectedClienteId: '',
       mascotasCliente: [], // Mascotas del cliente seleccionado
       clienteForm: {
@@ -493,26 +490,7 @@ export default {
       metodoPago: 'efectivo',
       usuarioId: null,
       // catálogo y ticket
-      productos: [
-        // Productos ejemplo
-        { id: 1, nombre: 'Proteína', tipo: 'producto', precio: 500, stock: 10 },
-        { id: 2, nombre: 'Guantes', tipo: 'producto', precio: 200, stock: 5 },
-        // Servicios
-        { id: 3, nombre: 'Consulta psicóloga', tipo: 'servicio', precio: 350 },
-        { id: 4, nombre: 'Consulta nutriólogo', tipo: 'servicio', precio: 350 },
-        { id: 5, nombre: 'Consulta fisioterapeuta', tipo: 'servicio', precio: 400 },
-        { id: 6, nombre: 'Consulta médica', tipo: 'servicio', precio: 300 },
-        // Paquetes
-        { id: 7, nombre: 'Paquete 0 - Visita', tipo: 'paquete', precio: 100 },
-        { id: 8, nombre: 'Paquete 0 - Semana', tipo: 'paquete', precio: 350 },
-        { id: 9, nombre: 'Paquete 0 - Quincena', tipo: 'paquete', precio: 600 },
-        { id: 10, nombre: 'Paquete 1 - Mensualidad Gym', tipo: 'paquete', precio: 900 },
-        { id: 11, nombre: 'Paquete 2 - Personal Trainer y Mensualidad', tipo: 'paquete', precio: 1800 },
-        { id: 12, nombre: 'Paquete 3 - Personal Trainer, Gimnasio y Nutriólogo', tipo: 'paquete', precio: 2200 },
-        { id: 13, nombre: 'Paquete 4 - Personal Trainer, Gimnasio y Fisioterapia', tipo: 'paquete', precio: 2200 },
-        { id: 14, nombre: 'Paquete 5 - Funcional', tipo: 'paquete', precio: 700 },
-        { id: 15, nombre: 'Paquete 6 - Funcional y Gimnasio', tipo: 'paquete', precio: 1200 }
-      ],
+      productos: [],
       ticket: [],
       paginaCatalogo: 1,
       productosPorPagina: 10,
@@ -600,11 +578,14 @@ export default {
     }
   },
 
-  mounted() {
-    this.usuarioId = 1
-    this.actualizarReloj()
-    this.intervalo = setInterval(this.actualizarReloj, 1000)
-  },
+    mounted() {
+      this.usuarioId = 1
+      this.actualizarReloj()
+      this.intervalo = setInterval(this.actualizarReloj, 1000)
+      this.cargarCatalogo()
+      this.cargarClientes()
+      this.cargarPromociones()
+    },
 
   beforeUnmount() {
     clearInterval(this.intervalo)
@@ -622,8 +603,36 @@ export default {
       this.hora = ahora.toLocaleTimeString('es-MX')
     },
 
+    async cargarPromociones() {
+      try {
+        const res = await fetch('http://localhost:8080/backend/public/api/gym/promociones')
+        if (!res.ok) throw new Error('No se pudo cargar las promociones')
+        const data = await res.json()
+        this.promociones = data
+      } catch (e) {
+        Swal.fire('Error', e.message || 'No se pudo cargar las promociones', 'error')
+      }
+    },
+
     // clientes (local)
-    cargarClientes() {},
+    async cargarClientes() {
+      try {
+        const res = await fetch('http://localhost:8080/backend/public/api/gym/clientes/paquetes')
+        if (!res.ok) throw new Error('No se pudo cargar la lista de clientes')
+        const data = await res.json()
+        // Normalizar: nombre completo, id, telefono, paquete, dias_restantes
+        this.clientes = data.map(c => ({
+          id: c.id_cliente,
+          nombre: c.nombre_completo,
+          edad: c.edad,
+          telefono: c.telefono || '',
+          paquete: c.paquete || '-',
+          dias_restantes: c.dias_restantes || '-',
+        }))
+      } catch (e) {
+        Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
+      }
+    },
     openClienteModal() {
       this.clienteForm = {
         nombre: '',
@@ -672,8 +681,24 @@ export default {
       this.mascotasCliente = cliente && cliente.mascotas ? cliente.mascotas : []
     },
 
-    // catálogo (local)
-    cargarCatalogo() {},
+    // catálogo (API)
+    async cargarCatalogo() {
+      try {
+        const res = await fetch('http://localhost:8080/backend/public/api/gym/general')
+        if (!res.ok) throw new Error('No se pudo cargar el catálogo')
+        const data = await res.json()
+        // Normalizar: precio a número, stock a número o undefined
+        this.productos = data.map(item => ({
+          ...item,
+          precio: Number(item.precio),
+          stock: item.tipo === 'producto' ? Number(item.stock) : undefined,
+          cantidad: 1,
+          descuento: 0
+        }))
+      } catch (e) {
+        Swal.fire('Error', e.message || 'No se pudo cargar el catálogo', 'error')
+      }
+    },
 
     agregarAlTicket(producto) {
       const esServicio = producto.tipo === 'servicio';
@@ -684,6 +709,8 @@ export default {
           this.selectedClienteId = '';
         }
         // Servicios siempre se agregan como una nueva línea, cantidad fija en 1
+        // Agregar campo fecha_servicio (por defecto hoy)
+        const hoy = new Date().toISOString().slice(0, 10);
         this.ticket.push({
           id: producto.id,
           nombre: producto.nombre,
@@ -691,7 +718,8 @@ export default {
           precio: producto.precio,
           cantidad: 1,
           descuento: 0,
-          mascota_id: ''
+          mascota_id: '',
+          fecha_servicio: hoy
         });
         return;
       }
@@ -719,7 +747,7 @@ export default {
             cantidad: 1,
             descuento: 0,
             mascota_id: '',
-            meses: producto.id >= 10 ? 1 : undefined
+            meses: producto.id === 0 ? '' : 1
           });
         }
         return;
@@ -748,7 +776,7 @@ export default {
 
     calcularTotalLinea(item) {
       let total = item.precio * item.cantidad;
-      if (item.tipo === 'paquete' && item.id >= 10) {
+      if (item.tipo === 'paquete' && item.id !== 0) {
         total = item.precio * item.cantidad * (item.meses || 1);
       }
       total = total * (1 - (item.descuento || 0) / 100);
@@ -764,7 +792,7 @@ export default {
       this.ticket.splice(idx, 1)
     },
 
-    guardarVenta() {
+    async guardarVenta() {
       if (!this.selectedClienteId) {
         return Swal.fire('Error', 'Selecciona un cliente', 'error')
       }
@@ -773,8 +801,114 @@ export default {
       if (serviciosSinMascota.length) {
         return Swal.fire('Error', 'Selecciona una mascota para cada servicio', 'error')
       }
-      Swal.fire('¡Listo!', 'Venta registrada localmente', 'success')
+
+      let errores = []
+
+      // 1. Registrar ventas de productos
+      const productosVenta = this.ticket.filter(i => i.tipo === 'producto')
+      for (const item of productosVenta) {
+        // Validar stock antes de enviar
+        const producto = this.productos.find(p => p.id === item.id)
+        if (!producto || producto.stock < item.cantidad) {
+          errores.push(`Stock insuficiente para ${item.nombre}`)
+          continue
+        }
+        try {
+          // Registrar venta de producto
+          const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/productos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cantidad: item.cantidad,
+              precio: item.precio,
+              descuento: item.descuento,
+              id_producto: item.id
+            })
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            errores.push(data.error || `Error al vender ${item.nombre}`)
+            continue
+          }
+          // Actualizar stock en la base de datos
+          const nuevoStock = producto.stock - item.cantidad
+          const resStock = await fetch(`http://localhost:8080/backend/public/api/gym/productos/stock/${item.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stock_actual: nuevoStock })
+          })
+          const dataStock = await resStock.json()
+          if (!resStock.ok) {
+            errores.push(dataStock.error || `Error al actualizar stock de ${item.nombre}`)
+            continue
+          }
+        } catch (e) {
+          errores.push(`Error de red al vender o actualizar stock de ${item.nombre}`)
+        }
+      }
+
+      // 2. Registrar ventas de servicios
+      const serviciosVenta = this.ticket.filter(i => i.tipo === 'servicio')
+      for (const item of serviciosVenta) {
+        try {
+          const total = (item.precio * item.cantidad * (1 - (item.descuento || 0) / 100)).toFixed(2)
+          const body = {
+            cantidad: item.cantidad,
+            precio: item.precio,
+            descuento: item.descuento,
+            total: total,
+            fecha: item.fecha_servicio,
+            id_servicio: item.id,
+            id_cliente: this.selectedClienteId
+          }
+          const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/servicios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            errores.push(data.error || `Error al vender servicio ${item.nombre}`)
+            continue
+          }
+        } catch (e) {
+          errores.push(`Error de red al vender servicio ${item.nombre}`)
+        }
+      }
+
+      // 3. Registrar venta de paquete (solo uno permitido en el ticket)
+      const paquete = this.ticket.find(i => i.tipo === 'paquete');
+      if (paquete) {
+        try {
+          const body = {
+            id_paquete: paquete.id,
+            id_cliente: this.selectedClienteId,
+            meses: paquete.id === 0 ? undefined : paquete.meses,
+            precio: paquete.precio,
+            descuento: paquete.descuento || 0
+          };
+          const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/paquetes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            errores.push(data.error || `Error al vender paquete ${paquete.nombre}`);
+          }
+        } catch (e) {
+          errores.push(`Error de red al vender paquete ${paquete.nombre}`);
+        }
+      }
+
+      if (errores.length) {
+        Swal.fire('Error', errores.join('\n'), 'error')
+        return
+      }
+      Swal.fire('¡Listo!', 'Venta registrada correctamente', 'success')
       this.cancelarVenta()
+      // Refrescar catálogo para actualizar stock
+      this.cargarCatalogo()
     },
 
     cancelarVenta() {

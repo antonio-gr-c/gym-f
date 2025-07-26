@@ -37,7 +37,7 @@ const usuario = ref('')
 const contrasena = ref('')
 const router = useRouter()
 
-const iniciarSesion = () => {
+const iniciarSesion = async () => {
   if (usuario.value === '' || contrasena.value === '') {
     Swal.fire({
       icon: 'warning',
@@ -47,24 +47,47 @@ const iniciarSesion = () => {
     return
   }
 
-  // Aquí pondrías tu lógica real de autenticación
-  if (usuario.value === 'admin' && contrasena.value === 'admin') {
-    Swal.fire({
-      icon: 'success',
-      title: 'Bienvenido',
-      text: 'Inicio de sesión exitoso'
-    }).then(() => {
-      router.push('/')
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        usuario: usuario.value,
+        contraseña: contrasena.value
+      })
     })
-    // redirigir o guardar sesión...
-  } else {
+    const data = await response.json()
+
+    if (response.ok && data.token) {
+      // Guardar token e ID en localStorage
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('id_usuario', data.id_usuario)
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Bienvenido',
+        text: data.message || 'Inicio de sesión exitoso'
+      }).then(() => {
+        router.push('/admin')
+      })
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Credenciales incorrectas',
+        text: data.message || 'Verifica tu usuario y contraseña.'
+      })
+    }
+  } catch (error) {
     Swal.fire({
       icon: 'error',
-      title: 'Credenciales incorrectas',
-      text: 'Verifica tu usuario y contraseña.'
+      title: 'Error de conexión',
+      text: 'No se pudo conectar al servidor. Intenta más tarde.'
     })
   }
 }
+
 </script>
 
 <style scoped>

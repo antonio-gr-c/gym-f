@@ -32,9 +32,6 @@
               <button class="btn btn-outline-secondary" @click="terminoBusquedaPaquete = ''">
                 <i class="material-icons">clear</i>
               </button>
-              <button class="btn btn-success ms-2" @click="abrirModalPaquete">
-                <i class="material-icons me-1">add_box</i> Nuevo Paquete
-              </button>
             </div>
           </div>
         </div>
@@ -165,12 +162,10 @@
                     <button class="btn btn-sm btn-outline-warning" title="Editar" @click="editarPaquete(paquete)">
                       <i class="material-icons">edit</i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger" title="Eliminar" @click="eliminarPaquete(paquete.id)">
+                    <button class="btn btn-sm btn-outline-danger" title="Cambiar estado" @click="eliminarPaquete(paquete.id)">
                       <i class="material-icons">delete</i>
                     </button>
-                    <button class="btn btn-sm btn-outline-dark" title="Cambiar estado" @click="paquete.activo = !paquete.activo">
-                      <i class="material-icons">swap_horiz</i>
-                    </button>
+
                   </div>
                 </td>
               </tr>
@@ -234,11 +229,7 @@
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Tipo de paquete</label>
-              <select v-model="paqueteDetalle.tipoPaquete" class="form-select">
-                <option value="Regular">Regular</option>
-                <option value="Promoción por meses">Promoción por meses</option>
-                <option value="Promoción estacional">Promoción estacional</option>
-              </select>
+              <input type="text" class="form-control" value="Regular" readonly />
             </div>
             <div class="col-md-6 mb-3" v-if="paqueteDetalle.tipoPaquete !== 'Regular'">
               <label class="form-label">Datos de promoción</label>
@@ -305,6 +296,33 @@
 </template>
 
 <script setup>
+
+async function eliminarPaquete(id) {
+  const paquete = paquetes.value.find(p => p.id === id)
+  if (!paquete) return
+  const accion = paquete.activo ? 'desactivar' : 'activar'
+  const confirm = await Swal.fire({
+    title: `¿Seguro que deseas ${accion} este paquete?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: `Sí, ${accion}`,
+    cancelButtonText: 'Cancelar'
+  })
+  if (!confirm.isConfirmed) return
+
+  try {
+    const res = await fetch(`http://localhost:8080/backend/public/api/gym/paquetes/estado/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'No se pudo cambiar el estado del paquete')
+    await Swal.fire({ icon: 'success', title: data.mensaje || 'Estado actualizado', showConfirmButton: false, timer: 1200 })
+    await cargarPaquetes()
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo cambiar el estado del paquete.' })
+  }
+}
 import Swal from 'sweetalert2'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
@@ -347,14 +365,57 @@ async function guardarEdicionDetalle() {
     await Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa los campos obligatorios.' })
     return
   }
-  const idx = paquetes.value.findIndex(p => p.id === paqueteDetalle.value.id)
-  if (idx !== -1) {
-    paquetes.value[idx] = { ...paqueteDetalle.value }
-    await Swal.fire({ icon: 'success', title: 'Paquete actualizado', showConfirmButton: false, timer: 1200 })
+
+  try {
+    const response = await fetch(`http://localhost:8080/backend/public/api/gym/paquetes/${paqueteDetalle.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nombre: paqueteDetalle.value.nombre,
+        descripcion: paqueteDetalle.value.descripcion,
+        precio: paqueteDetalle.value.precio,
+        duracion: paqueteDetalle.value.duracionCantidad,
+        unidad: paqueteDetalle.value.duracionUnidad,
+        visita_unica: paqueteDetalle.value.visita_unica ?? false,
+        semana: paqueteDetalle.value.semana ?? false,
+        quincena: paqueteDetalle.value.quincena ?? false,
+        mensualidad_gym: paqueteDetalle.value.mensualidad_gym ?? false,
+        personal_trainer: paqueteDetalle.value.personal_trainer ?? false,
+        nutriologo: paqueteDetalle.value.nutriologo ?? false,
+        fisioterapia: paqueteDetalle.value.fisioterapia ?? false,
+        area_funcional: paqueteDetalle.value.area_funcional ?? false,
+        consulta_medica: paqueteDetalle.value.consulta_medica ?? false,
+        consulta_psicologica: paqueteDetalle.value.consulta_psicologica ?? false,
+        area_kids: paqueteDetalle.value.area_kids ?? false,
+        funcional_adultos: paqueteDetalle.value.funcional_adultos ?? false,
+        area_pesas: paqueteDetalle.value.area_pesas ?? false,
+        area_fisioterapia: paqueteDetalle.value.area_fisioterapia ?? false,
+        gym_general: paqueteDetalle.value.gym_general ?? false,
+        tipo_paquete: "Regular",
+        estado: paqueteDetalle.value.estado ?? true
+      })
+    })
+
+    const data = await response.json()
+
+    if (response.ok) {
+      const idx = paquetes.value.findIndex(p => p.id === paqueteDetalle.value.id)
+      if (idx !== -1) {
+        paquetes.value[idx] = { ...paqueteDetalle.value }
+      }
+      await Swal.fire({ icon: 'success', title: 'Paquete actualizado', showConfirmButton: false, timer: 1200 })
+      editandoDetalle.value = false
+      paqueteDetalle.value = null
+    } else {
+      await Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el paquete.' })
+    }
+  } catch (error) {
+    await Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo conectar al servidor.' })
   }
-  editandoDetalle.value = false
-  paqueteDetalle.value = null
 }
+
 
 function cancelarEdicionDetalle() {
   paqueteDetalle.value = null
@@ -367,48 +428,86 @@ function abrirModalPaquete() {
   }
 }
 
-function agregarPaqueteModal() {
+async function agregarPaqueteModal() {
   if (!nuevoPaquete.value.nombre || !nuevoPaquete.value.precio || !nuevoPaquete.value.duracionCantidad || !nuevoPaquete.value.duracionUnidad) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa los campos obligatorios.' })
     return
   }
-  paquetes.value.push({
-    id: paquetes.value.length ? Math.max(...paquetes.value.map(p => p.id)) + 1 : 1,
+
+  // Mapear servicios y áreas a campos booleanos
+  const servicios = {
+    'Visita única': 'visita_unica',
+    'Semana': 'semana',
+    'Quincena': 'quincena',
+    'Mensualidad gym': 'mensualidad_gym',
+    'Personal trainer': 'personal_trainer',
+    'Nutriólogo': 'nutriologo',
+    'Fisioterapia': 'fisioterapia',
+    'Área funcional': 'area_funcional',
+    'Consulta médica': 'consulta_medica',
+    'Consulta psicológica': 'consulta_psicologica'
+  }
+  const areas = {
+    'Kids': 'area_kids',
+    'Funcional adultos': 'funcional_adultos',
+    'Área de pesas': 'area_pesas',
+    'Área de fisioterapia': 'area_fisioterapia',
+    'Gym general': 'gym_general'
+  }
+
+  const payload = {
     nombre: nuevoPaquete.value.nombre,
     descripcion: nuevoPaquete.value.descripcion,
     precio: nuevoPaquete.value.precio,
-    duracionCantidad: nuevoPaquete.value.duracionCantidad,
-    duracionUnidad: nuevoPaquete.value.duracionUnidad,
-    serviciosIncluidos: [...nuevoPaquete.value.serviciosIncluidos],
-    areasAcceso: [...nuevoPaquete.value.areasAcceso],
-    tipoPaquete: nuevoPaquete.value.tipoPaquete,
+    duracion: nuevoPaquete.value.duracionCantidad,
+    unidad: nuevoPaquete.value.duracionUnidad,
+    tipo_paquete: nuevoPaquete.value.tipoPaquete,
+    estado: nuevoPaquete.value.estado === 'Activo' ? 1 : 0,
+    // Servicios
+    ...Object.fromEntries(Object.entries(servicios).map(([k, v]) => [v, nuevoPaquete.value.serviciosIncluidos.includes(k)])),
+    // Áreas
+    ...Object.fromEntries(Object.entries(areas).map(([k, v]) => [v, nuevoPaquete.value.areasAcceso.includes(k)])),
+    // Promoción
     descuento: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.descuento : '',
-    precioEspecial: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.precioEspecial : '',
-    fechaInicio: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaInicio : '',
-    fechaFin: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaFin : '',
-    estado: nuevoPaquete.value.estado,
-    activo: nuevoPaquete.value.estado === 'Activo'
-  })
-  Swal.fire({ icon: 'success', title: 'Paquete agregado', showConfirmButton: false, timer: 1200 })
-  nuevoPaquete.value = {
-    nombre: '',
-    descripcion: '',
-    precio: '',
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: [],
-    areasAcceso: [],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo'
+    precio_especial: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.precioEspecial : '',
+    fecha_inicio: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaInicio : '',
+    fecha_fin: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaFin : ''
   }
-  // Cerrar modal
-  const modal = document.getElementById('modalAgregarPaquete')
-  if (modal) {
-    window.bootstrap.Modal.getInstance(modal).hide()
+
+  try {
+    const res = await fetch('http://localhost:8080/backend/public/api/gym/paquetes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'No se pudo registrar el paquete')
+    Swal.fire({ icon: 'success', title: 'Paquete agregado', showConfirmButton: false, timer: 1200 })
+    // Refrescar lista
+    await cargarPaquetes()
+    // Limpiar formulario
+    nuevoPaquete.value = {
+      nombre: '',
+      descripcion: '',
+      precio: '',
+      duracionCantidad: 1,
+      duracionUnidad: 'Meses',
+      serviciosIncluidos: [],
+      areasAcceso: [],
+      tipoPaquete: 'Regular',
+      descuento: '',
+      precioEspecial: '',
+      fechaInicio: '',
+      fechaFin: '',
+      estado: 'Activo'
+    }
+    // Cerrar modal
+    const modal = document.getElementById('modalAgregarPaquete')
+    if (modal) {
+      window.bootstrap.Modal.getInstance(modal).hide()
+    }
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo registrar el paquete.' })
   }
 }
 
@@ -428,161 +527,55 @@ const nuevoPaquete = ref({
   estado: 'Activo'
 })
 
-const paquetes = ref([
-  {
-    id: 1,
-    nombre: 'Paquete 0 - Visita',
-    descripcion: 'Acceso por un día a todas las áreas del gimnasio.',
-    precio: 100.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Días',
-    serviciosIncluidos: ['Visita única'],
-    areasAcceso: ['Gym general', 'Área de pesas'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 2,
-    nombre: 'Paquete 0 - Semana',
-    descripcion: 'Acceso ilimitado al gimnasio durante una semana.',
-    precio: 350.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Semanas',
-    serviciosIncluidos: ['Semana'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Funcional adultos'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 3,
-    nombre: 'Paquete 0 - Quincena',
-    descripcion: 'Acceso ilimitado al gimnasio durante 15 días.',
-    precio: 600.00,
-    duracionCantidad: 15,
-    duracionUnidad: 'Días',
-    serviciosIncluidos: ['Quincena'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Funcional adultos'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 4,
-    nombre: 'Paquete 1 - Mensualidad Gym',
-    descripcion: 'Acceso ilimitado al gimnasio durante 1 mes.',
-    precio: 900.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Mensualidad gym'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Funcional adultos'],
-    tipoPaquete: 'Promoción por meses',
-    descuento: 10,
-    precioEspecial: 800.00,
-    fechaInicio: '2025-08-01',
-    fechaFin: '2025-08-31',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 5,
-    nombre: 'Paquete 2 - Personal Trainer y Mensualidad',
-    descripcion: 'Incluye personal trainer y acceso al gym durante 1 mes.',
-    precio: 1800.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Mensualidad gym', 'Personal trainer'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Funcional adultos'],
-    tipoPaquete: 'Promoción estacional',
-    descuento: 15,
-    precioEspecial: 1500.00,
-    fechaInicio: '2025-09-01',
-    fechaFin: '2025-09-30',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 6,
-    nombre: 'Paquete 3 - Personal Trainer, Gimnasio y Nutriólogo',
-    descripcion: 'Incluye personal trainer, acceso al gym y consulta con nutriólogo durante 1 mes.',
-    precio: 2200.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Mensualidad gym', 'Personal trainer', 'Nutriólogo'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Funcional adultos'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 7,
-    nombre: 'Paquete 4 - Personal Trainer, Gimnasio y Fisioterapia',
-    descripcion: 'Incluye personal trainer, acceso al gym y fisioterapia durante 1 mes.',
-    precio: 2200.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Mensualidad gym', 'Personal trainer', 'Fisioterapia'],
-    areasAcceso: ['Gym general', 'Área de pesas', 'Área de fisioterapia'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 8,
-    nombre: 'Paquete 5 - Funcional',
-    descripcion: 'Acceso a clases funcionales durante 1 mes.',
-    precio: 700.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Área funcional'],
-    areasAcceso: ['Funcional adultos'],
-    tipoPaquete: 'Regular',
-    descuento: '',
-    precioEspecial: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Activo',
-    activo: true
-  },
-  {
-    id: 9,
-    nombre: 'Paquete 6 - Funcional y Gimnasio',
-    descripcion: 'Acceso a clases funcionales y gimnasio durante 1 mes.',
-    precio: 1200.00,
-    duracionCantidad: 1,
-    duracionUnidad: 'Meses',
-    serviciosIncluidos: ['Área funcional', 'Mensualidad gym'],
-    areasAcceso: ['Funcional adultos', 'Gym general'],
-    tipoPaquete: 'Promoción por meses',
-    descuento: 5,
-    precioEspecial: 1100.00,
-    fechaInicio: '2025-10-01',
-    fechaFin: '2025-10-31',
-    estado: 'Activo',
-    activo: true
+const paquetes = ref([])
+
+async function cargarPaquetes() {
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/paquetes')
+    if (!response.ok) throw new Error('No se pudo obtener la lista de paquetes')
+    const data = await response.json()
+    paquetes.value = data.map(p => {
+      // Servicios
+      const serviciosIncluidos = []
+      if (p.visita_unica) serviciosIncluidos.push('Visita única')
+      if (p.semana) serviciosIncluidos.push('Semana')
+      if (p.quincena) serviciosIncluidos.push('Quincena')
+      if (p.mensualidad_gym) serviciosIncluidos.push('Mensualidad gym')
+      if (p.personal_trainer) serviciosIncluidos.push('Personal trainer')
+      if (p.nutriologo) serviciosIncluidos.push('Nutriólogo')
+      if (p.fisioterapia) serviciosIncluidos.push('Fisioterapia')
+      if (p.area_funcional) serviciosIncluidos.push('Área funcional')
+      if (p.consulta_medica) serviciosIncluidos.push('Consulta médica')
+      if (p.consulta_psicologica) serviciosIncluidos.push('Consulta psicológica')
+      // Áreas
+      const areasAcceso = []
+      if (p.area_kids) areasAcceso.push('Kids')
+      if (p.funcional_adultos) areasAcceso.push('Funcional adultos')
+      if (p.area_pesas) areasAcceso.push('Área de pesas')
+      if (p.area_fisioterapia) areasAcceso.push('Área de fisioterapia')
+      if (p.gym_general) areasAcceso.push('Gym general')
+      return {
+        id: p.id_paquete,
+        nombre: p.nombre,
+        descripcion: p.descripcion,
+        precio: Number(p.precio),
+        duracionCantidad: Number(p.duracion),
+        duracionUnidad: p.unidad,
+        serviciosIncluidos,
+        areasAcceso,
+        tipoPaquete: p.tipo_paquete,
+        descuento: p.descuento || '',
+        precioEspecial: p.precio_especial || '',
+        fechaInicio: p.fecha_inicio || '',
+        fechaFin: p.fecha_fin || '',
+        estado: p.estado === 1 ? 'Activo' : 'Inactivo',
+        activo: p.estado === 1
+      }
+    })
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la lista de paquetes.' })
   }
-])
+}
 
 const filtroPaquetes = ref('activos')
 const terminoBusquedaPaquete = ref('')
@@ -620,9 +613,11 @@ function actualizarFechaHora() {
   horaFormateada.value = ahora.toLocaleTimeString('es-MX', { hour12: false })
 }
 
+
 onMounted(() => {
   actualizarFechaHora()
   intervalo = setInterval(actualizarFechaHora, 1000)
+  cargarPaquetes()
 })
 
 onUnmounted(() => {

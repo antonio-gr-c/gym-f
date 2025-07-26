@@ -1,5 +1,8 @@
 <template>
   <div class="contenedor-login">
+    <!-- Botón casita -->
+    <span class="material-icons casita" @click="irAlLogin" title="Volver al inicio">home</span>
+
     <!-- Lado izquierdo con logo fijo -->
     <div class="lado-izquierdo">
       <img :src="logo" alt="Logo" class="logo" />
@@ -29,10 +32,18 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import Swal from 'sweetalert2'
 import logo from '../assets/images/logo.png'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
+const irAlLogin = () => {
+  router.push('/login') // Asegúrate que la ruta esté bien configurada
+}
+
 
 const telefono = ref('')
 const reloj = ref('')
@@ -67,82 +78,46 @@ onUnmounted(() => {
   clearInterval(intervalo)
 })
 
-const usuarios = [
-  {
-    nombre: 'Fani',
-    telefono: '9513009236',
-    fecha_vencimiento: '2025-08-02',
-    plan: 'Paquete 2 - Gym + Entrenador',
-    promocion: 'Febrero - Amor y Amistad',
-  },
-  {
-    nombre: 'Antonio',
-    telefono: '9516577535',
-    fecha_vencimiento: '2025-07-20',
-    plan: 'Paquete 1 - Mensualidad Gym',
-    promocion: 'Mes del Padre',
-  },
-  {
-    nombre: 'Tadeo',
-    telefono: '9510000000',
-    fecha_vencimiento: '2025-07-25',
-    plan: 'Paquete 4 - Gym + Entrenador + Fisioterapia',
-    promocion: 'Inicio de año',
-  },
-]
+// Eliminar mock de usuarios y usar API
 
-const verificarTelefono = () => {
-  const usuario = usuarios.find(u => u.telefono === telefono.value)
-
-  if (!usuario) {
-    Swal.fire({
-      icon: 'error',
-      title: 'No encontrado',
-      text: 'Este número no está registrado.',
-    })
-    return
+const verificarTelefono = async () => {
+  if (!telefono.value) return;
+  try {
+    const res = await fetch('https://chemisetteoaxaca.online/backend/public/api/gym/acceso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telefono: telefono.value })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      Swal.fire({ icon: 'error', title: 'Error', text: 'Error de servidor' });
+      return;
+    }
+    if (!data.acceso) {
+      Swal.fire({ icon: 'error', title: 'Acceso denegado', text: data.mensaje || 'Acceso denegado' });
+    } else {
+      // acceso true
+      let icon = 'success';
+      let title = '¡Acceso aprobado!';
+      let dias = data.dias_restantes;
+      if (dias <= 5) {
+        icon = 'warning';
+        title = '¡Atención!';
+      }
+      Swal.fire({
+        icon,
+        title,
+        html: `
+          <p>${dias <= 5 ? `Tu membresía está por vencer. Faltan <strong>${dias} día(s)</strong>.` : `Faltan <strong>${dias} día(s)</strong> de membresía.`}</p>
+          <hr/>
+          <p><strong>Plan:</strong> ${data.paquete || ''}</p>
+        `
+      });
+    }
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar al servidor.' });
   }
-
-  const hoy = new Date()
-  const vencimiento = new Date(usuario.fecha_vencimiento)
-  const diasRestantes = Math.ceil((vencimiento - hoy) / (1000 * 60 * 60 * 24))
-
-  if (diasRestantes < 0) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Acceso denegado',
-      html: `
-        <p>Tu membresía venció el <strong>${usuario.fecha_vencimiento}</strong>.</p>
-        <hr/>
-        <p><strong>Plan:</strong> ${usuario.plan}</p>
-        <p><strong>Promoción:</strong> ${usuario.promocion}</p>
-      `,
-    })
-  } else if (diasRestantes <= 5) {
-    Swal.fire({
-      icon: 'warning',
-      title: `¡Hola, ${usuario.nombre}!`,
-      html: `
-        <p>Tu membresía está por vencer. Faltan <strong>${diasRestantes} día(s)</strong>.</p>
-        <hr/>
-        <p><strong>Plan:</strong> ${usuario.plan}</p>
-        <p><strong>Promoción:</strong> ${usuario.promocion}</p>
-      `,
-    })
-  } else {
-    Swal.fire({
-      icon: 'success',
-      title: `¡Hola, ${usuario.nombre}!`,
-      html: `
-        <p>Acceso aprobado. Faltan <strong>${diasRestantes} día(s)</strong>.</p>
-        <hr/>
-        <p><strong>Plan:</strong> ${usuario.plan}</p>
-        <p><strong>Promoción:</strong> ${usuario.promocion}</p>
-      `,
-    })
-  }
-
-  telefono.value = ''
+  telefono.value = '';
 }
 </script>
 
@@ -258,4 +233,20 @@ button:hover {
     max-height: 60%;
   }
 }
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+.casita {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 2.2rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s ease, color 0.2s;
+  color: #02040f;
+}
+.casita:hover {
+  transform: scale(1.2);
+  color: #93b84f;
+}
+
 </style>

@@ -91,21 +91,17 @@
           <th>Nombre completo</th>
           <th>Edad</th>
           <th>Teléfono</th>
-          <th>Tipo de suscripción</th>
-          <th>Entrenador</th>
-          <th>Plan</th>
+          <th>Paquete</th>
           <th>Días restantes</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="cliente in clientesOrdenados" :key="cliente.id">
-          <td class="td-nombre">{{ cliente.nombre }} {{ cliente.apellidoPaterno }} {{ cliente.apellidoMaterno }}</td>
+          <td class="td-nombre">{{ cliente.nombre }}</td>
           <td class="td-edad">{{ cliente.edad }}</td>
           <td class="td-telefono">{{ cliente.telefono }}</td>
-          <td class="td-suscripcion">{{ cliente.suscripcion || 'No especificado' }}</td>
-          <td class="td-entrenador">{{ cliente.entrenador || 'No asignado' }}</td>
-          <td class="td-plan">{{ cliente.plan || 'No especificado' }}</td>
+          <td class="td-suscripcion">{{ cliente.paquete }}</td>
           <td class="td-dias">
             <span
               :class="{
@@ -115,19 +111,13 @@
                 'dias-centro': true
               }"
             >
-              {{ cliente.diasRestantes !== undefined ? cliente.diasRestantes : 'N/A' }}
+              {{ cliente.diasRestantes }}
             </span>
           </td>
           <td class="td-acciones">
             <div class="acciones-btns d-flex gap-1 justify-content-center">
-              <button class="btn btn-sm btn-outline-primary" title="Ver" @click="verDetalle(cliente)">
-                <i class="material-icons">visibility</i>
-              </button>
               <button class="btn btn-sm btn-outline-warning" title="Editar" @click="editarCliente(cliente)">
                 <i class="material-icons">edit</i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" title="Eliminar" @click="eliminarCliente(cliente.id)">
-                <i class="material-icons">delete</i>
               </button>
             </div>
           </td>
@@ -171,22 +161,6 @@
               <label class="form-label"><b>Teléfono:</b></label>
               <input v-model="clienteDetalle.telefono" type="tel" class="form-control" />
             </div>
-            <div class="col-md-4 mb-2">
-              <label class="form-label"><b>Tipo de suscripción:</b></label>
-              <input v-model="clienteDetalle.suscripcion" type="text" class="form-control" />
-            </div>
-            <div class="col-md-4 mb-2">
-              <label class="form-label"><b>Entrenador:</b></label>
-              <input v-model="clienteDetalle.entrenador" type="text" class="form-control" />
-            </div>
-            <div class="col-md-4 mb-2">
-              <label class="form-label"><b>Plan:</b></label>
-              <input v-model="clienteDetalle.plan" type="text" class="form-control" />
-            </div>
-            <div class="col-md-4 mb-2">
-              <label class="form-label"><b>Días restantes:</b></label>
-              <input v-model="clienteDetalle.diasRestantes" type="number" class="form-control" min="0" />
-            </div>
           </div>
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success me-2">Guardar cambios</button>
@@ -199,9 +173,7 @@
           <div class="col-md-4 mb-2"><b>Apellido materno:</b> {{ clienteDetalle.apellidoMaterno }}</div>
           <div class="col-md-4 mb-2"><b>Edad:</b> {{ clienteDetalle.edad }}</div>
           <div class="col-md-4 mb-2"><b>Teléfono:</b> {{ clienteDetalle.telefono }}</div>
-          <div class="col-md-4 mb-2"><b>Tipo de suscripción:</b> {{ clienteDetalle.suscripcion || 'No especificado' }}</div>
-          <div class="col-md-4 mb-2"><b>Entrenador:</b> {{ clienteDetalle.entrenador || 'No asignado' }}</div>
-          <div class="col-md-4 mb-2"><b>Plan:</b> {{ clienteDetalle.plan || 'No especificado' }}</div>
+          <div class="col-md-4 mb-2"><b>Paquete:</b> {{ clienteDetalle.paquete || 'No especificado' }}</div>
           <div class="col-md-4 mb-2"><b>Días restantes:</b> {{ clienteDetalle.diasRestantes !== undefined ? clienteDetalle.diasRestantes : 'N/A' }}</div>
         </div>
       </div>
@@ -226,8 +198,26 @@ function verDetalle(cliente) {
 }
 
 function editarCliente(cliente) {
+  // Dividir nombre completo en nombre, apellido paterno y materno
+  let nombre = '', apellidoPaterno = '', apellidoMaterno = '';
+  if (cliente.nombre) {
+    const partes = cliente.nombre.trim().split(' ');
+    if (partes.length === 1) {
+      nombre = partes[0];
+    } else if (partes.length === 2) {
+      nombre = partes[0];
+      apellidoPaterno = partes[1];
+    } else if (partes.length >= 3) {
+      nombre = partes[0];
+      apellidoPaterno = partes[1];
+      apellidoMaterno = partes.slice(2).join(' ');
+    }
+  }
   clienteDetalle.value = {
-    ...cliente
+    ...cliente,
+    nombre,
+    apellidoPaterno,
+    apellidoMaterno
   }
   editandoDetalle.value = true
 }
@@ -237,13 +227,44 @@ async function guardarEdicionDetalle() {
     await Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  const idx = clientes.value.findIndex(c => c.id === clienteDetalle.value.id)
-  if (idx !== -1) {
-    clientes.value[idx] = { ...clienteDetalle.value }
-    await Swal.fire({ icon: 'success', title: 'Cliente actualizado', showConfirmButton: false, timer: 1200 })
+  try {
+    const body = {
+      nombre: clienteDetalle.value.nombre,
+      apellido_paterno: clienteDetalle.value.apellidoPaterno,
+      apellido_materno: clienteDetalle.value.apellidoMaterno,
+      edad: clienteDetalle.value.edad,
+      telefono: clienteDetalle.value.telefono,
+      activo: true
+    };
+    const res = await fetch(`http://localhost:8080/backend/public/api/gym/clientes/${clienteDetalle.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      // Actualizar en la tabla local
+      const idx = clientes.value.findIndex(c => c.id === clienteDetalle.value.id);
+      if (idx !== -1) {
+        // Unir nombre completo para la tabla
+        clientes.value[idx] = {
+          ...clientes.value[idx],
+          nombre: `${body.nombre} ${body.apellido_paterno} ${body.apellido_materno}`.trim(),
+          edad: body.edad,
+          telefono: body.telefono
+        };
+      }
+      await Swal.fire({ icon: 'success', title: 'Cliente actualizado', text: data.mensaje || '', showConfirmButton: false, timer: 1200 });
+    } else {
+      await Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el cliente.' });
+      return;
+    }
+  } catch (e) {
+    await Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar al servidor. Intenta más tarde.' });
+    return;
   }
-  editandoDetalle.value = false
-  clienteDetalle.value = null
+  editandoDetalle.value = false;
+  clienteDetalle.value = null;
 }
 
 function cancelarEdicionDetalle() {
@@ -258,32 +279,45 @@ function abrirModalCliente() {
   }
 }
 
-function agregarClienteModal() {
+async function agregarClienteModal() {
   if (!nuevoCliente.value.nombre || !nuevoCliente.value.apellidoPaterno || !nuevoCliente.value.apellidoMaterno || !nuevoCliente.value.edad || !nuevoCliente.value.telefono) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
     return
   }
-  clientes.value.push({
-    id: clientes.value.length ? Math.max(...clientes.value.map(c => c.id)) + 1 : 1,
-    nombre: nuevoCliente.value.nombre,
-    apellidoPaterno: nuevoCliente.value.apellidoPaterno,
-    apellidoMaterno: nuevoCliente.value.apellidoMaterno,
-    edad: nuevoCliente.value.edad,
-    telefono: nuevoCliente.value.telefono,
-    activo: true
-  })
-  Swal.fire({ icon: 'success', title: 'Cliente agregado', showConfirmButton: false, timer: 1200 })
-  nuevoCliente.value = {
-    nombre: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    edad: '',
-    telefono: ''
-  }
-  // Cerrar modal
-  const modal = document.getElementById('modalAgregarCliente')
-  if (modal) {
-    window.bootstrap.Modal.getInstance(modal).hide()
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/clientes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nombre: nuevoCliente.value.nombre,
+        apellido_paterno: nuevoCliente.value.apellidoPaterno,
+        apellido_materno: nuevoCliente.value.apellidoMaterno,
+        edad: nuevoCliente.value.edad,
+        telefono: nuevoCliente.value.telefono
+      })
+    })
+    const data = await response.json()
+    if (response.ok) {
+      Swal.fire({ icon: 'success', title: 'Cliente agregado', text: data.mensaje || 'Cliente agregado correctamente', showConfirmButton: false, timer: 1200 })
+      nuevoCliente.value = {
+        nombre: '',
+        apellidoPaterno: '',
+        apellidoMaterno: '',
+        edad: '',
+        telefono: ''
+      }
+      // Cerrar modal
+      const modal = document.getElementById('modalAgregarCliente')
+      if (modal) {
+        window.bootstrap.Modal.getInstance(modal).hide()
+      }
+    } else {
+      Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo agregar el cliente.' })
+    }
+  } catch (error) {
+    Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar al servidor. Intenta más tarde.' })
   }
 }
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -299,11 +333,28 @@ const nuevoCliente = ref({
   telefono: ''
 })
 
-const clientes = ref([
-  { id: 1, nombre: 'Ana', apellidoPaterno: 'Torres', apellidoMaterno: '', edad: 25, telefono: '5551234567', activo: true, suscripcion: 'Mensual', entrenador: 'Marcos', plan: 'Básico', diasRestantes: 12 },
-  { id: 2, nombre: 'Carlos', apellidoPaterno: 'Ruiz', apellidoMaterno: '', edad: 30, telefono: '5558889999', activo: false, suscripcion: 'Trimestral', entrenador: 'Lucía', plan: 'Premium', diasRestantes: 0 },
-  { id: 3, nombre: 'Lucía', apellidoPaterno: 'Gómez', apellidoMaterno: '', edad: 27, telefono: '5552223333', activo: true, suscripcion: 'Mensual', entrenador: 'Daniel', plan: 'Básico', diasRestantes: 7 }
-])
+const clientes = ref([])
+
+onMounted(async () => {
+  actualizarFechaHora()
+  intervalo = setInterval(actualizarFechaHora, 1000)
+  try {
+    const res = await fetch('http://localhost:8080/backend/public/api/gym/clientes/paquetes')
+    if (!res.ok) throw new Error('No se pudo cargar la lista de clientes')
+    const data = await res.json()
+    clientes.value = data.map(c => ({
+      id: c.id_cliente,
+      nombre: c.nombre_completo,
+      edad: c.edad,
+      telefono: c.telefono || '',
+      paquete: c.paquete || 'No especificado',
+      diasRestantes: c.dias_restantes !== null && c.dias_restantes !== undefined ? c.dias_restantes : 'N/A',
+      activo: c.activo === undefined ? (c.dias_restantes > 0) : !!c.activo
+    }))
+  } catch (e) {
+    Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
+  }
+})
 
 const clientesOrdenados = computed(() => {
   let filtrados = [...clientes.value]
@@ -348,25 +399,44 @@ const agregarCliente = () => {
   mostrarFormulario.value = true
 }
 
-function eliminarCliente(id) {
-  Swal.fire({
-    title: '¿Seguro que deseas eliminar este cliente?',
-    icon: 'warning',
+async function eliminarCliente(id) {
+  const cliente = clientes.value.find(c => c.id === id);
+  if (!cliente) return;
+  const accion = cliente.activo ? 'desactivar' : 'activar';
+  const confirmText = cliente.activo ? 'Sí, desactivar' : 'Sí, activar';
+  const title = cliente.activo ? '¿Seguro que deseas desactivar este cliente?' : '¿Seguro que deseas activar este cliente?';
+  const icon = cliente.activo ? 'warning' : 'question';
+  const result = await Swal.fire({
+    title,
+    icon,
     showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
+    confirmButtonText: confirmText,
     cancelButtonText: 'Cancelar',
     reverseButtons: true
-  }).then(result => {
-    if (result.isConfirmed) {
-      clientes.value = clientes.value.filter(c => c.id !== id)
-      // Cerrar master-detail si el cliente eliminado estaba abierto
-      if (clienteDetalle.value && clienteDetalle.value.id === id) {
-        clienteDetalle.value = null
-        editandoDetalle.value = false
+  });
+  if (result.isConfirmed) {
+    try {
+      const res = await fetch(`http://localhost:8080/backend/public/api/gym/clientes/estado/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Cambiar estado localmente
+        cliente.activo = !cliente.activo;
+        Swal.fire({ icon: 'success', title: data.mensaje || 'Estado actualizado', showConfirmButton: false, timer: 1200 });
+        // Cerrar master-detail si el cliente estaba abierto
+        if (clienteDetalle.value && clienteDetalle.value.id === id) {
+          clienteDetalle.value = null;
+          editandoDetalle.value = false;
+        }
+      } else {
+        Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el estado.' });
       }
-      Swal.fire({ icon: 'success', title: 'Cliente eliminado', showConfirmButton: false, timer: 1200 })
+    } catch (e) {
+      Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar al servidor. Intenta más tarde.' });
     }
-  })
+  }
 }
 
 const tituloLista = computed(() => {

@@ -6,7 +6,7 @@
     <div class="encabezado-dashboard d-flex flex-wrap justify-content-between align-items-center p-3 mb-4">
       <div class="saludo">
         <h4 class="m-0">
-          Hola, Tadeo <span class="rol">(Administrador)</span>
+          Bienvenido <span class="rol">(Administrador)</span>
         </h4>
       </div>
       <div class="reloj text-end">
@@ -15,32 +15,21 @@
       </div>
     </div>
 
-    <!-- Gráficas en dos columnas -->
-    <div class="row mb-4">
-      <div class="col-md-6 mb-3">
-        <div class="card grafica-blanca h-100">
-          <div class="card-body p-2 d-flex flex-column align-items-center justify-content-center">
-            <h6 class="card-title d-flex align-items-center mb-2" style="color:#1a1d2b;font-weight:bold;">
-              <i class="material-icons me-2" style="font-size:1.2rem;">bar_chart</i>
+    <!-- Gráfica de barras: Entradas al gimnasio -->
+    <div class="row mb-4 justify-content-center">
+      <div class="col-12 mb-3 d-flex justify-content-center">
+        <div class="card grafica-blanca h-100 w-100" style="max-width: 700px; margin: 0 auto;">
+          <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center">
+            <h6 class="card-title d-flex align-items-center mb-3" style="color:#1a1d2b;font-weight:bold; font-size:1.3rem;">
+              <i class="material-icons me-2" style="font-size:1.5rem;">bar_chart</i>
               Entradas al gimnasio
             </h6>
-            <canvas ref="barrasRef" height="140" style="max-width:100%;"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 mb-3">
-        <div class="card grafica-blanca h-100">
-          <div class="card-body p-2 d-flex flex-column align-items-center justify-content-center">
-            <h6 class="card-title d-flex align-items-center mb-2" style="color:#1a1d2b;font-weight:bold;">
-             
-           
-            </h6>
-            <canvas ref="pastelRef" height="180" width="180" style="max-width:100%;"></canvas>
+            <canvas ref="barrasRef" height="220" style="max-width:100%; min-width:300px;"></canvas>
           </div>
         </div>
       </div>
     </div>
-    <!-- Fin de gráficas en dos columnas -->
+    <!-- Fin de gráfica de barras -->
 
 
     <!-- Tarjetas KPI -->
@@ -57,133 +46,6 @@
     </div>
     <!-- Fin de tarjetas KPI -->
 
-   
-
-    <!-- Tablas de contexto gym -->
-    <div class="row">
-      <div class="col-md-6 mb-4">
-        <div class="card h-100 tarjeta-tabla">
-          <div class="card-body">
-            <h5 class="card-title d-flex align-items-center">
-              <i class="material-icons me-2">event_busy</i>
-              Membresías próximas a vencer
-            </h5>
-            <div class="tabla-scroll">
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Tipo</th>
-                    <th>Vence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(m, i) in membresiasPorVencer" :key="i">
-                    <td>{{ m.cliente }}</td>
-                    <td>{{ m.tipo }}</td>
-                    <td>{{ m.vence }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6 mb-4">
-        <div class="card h-100 tarjeta-tabla">
-          <div class="card-body">
-            <h5 class="card-title d-flex align-items-center">
-              <i class="material-icons me-2">person_add</i>
-              Últimos clientes registrados
-            </h5>
-            <div class="tabla-scroll">
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Fecha alta</th>
-                    <th>Tipo Membresía</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(c, i) in ultimosClientes" :key="i">
-                    <td>{{ c.nombre }}</td>
-                    <td>{{ c.fechaAlta }}</td>
-                    <td>{{ c.tipoMembresia }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Fin tablas contexto gym -->
-
-    <!-- Productos más vendidos y stock bajo -->
-    <div class="row">
-      <div class="col-md-6 mb-4">
-        <div class="card h-100 tarjeta-tabla">
-          <div class="card-body">
-            <h5 class="card-title d-flex align-items-center">
-              <i class="material-icons me-2">trending_up</i>
-              Productos y servicios más vendidos
-            </h5>
-            <div class="tabla-scroll">
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Nombre</th>
-                    <th>Cantidad vendida</th>
-                    <th>Ingreso total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(p, i) in productosMasVendidos" :key="i">
-                    <td>{{ p.tipo }}</td>
-                    <td>{{ p.nombre }}</td>
-                    <td>{{ p.cantidadVendida }}</td>
-                    <td>{{ p.ingresoTotal }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Productos con stock bajo -->
-      <div class="col-md-6 mb-4">
-        <div class="card h-100 tarjeta-tabla">
-          <div class="card-body">
-            <h5 class="card-title d-flex align-items-center">
-              <i class="material-icons me-2 text-warning">warning</i>
-              Productos con stock bajo
-            </h5>
-            <div class="tabla-scroll">
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Stock</th>
-                    <th>Mínimo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(p, i) in productosStockBajo" :key="i">
-                    <td>{{ p.nombre }}</td>
-                    <td>{{ p.stock }}</td>
-                    <td>{{ p.minimo }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Fin de tablas -->
   </div>
 </template>
 
@@ -195,27 +57,56 @@ export default {
   components: {  },
   setup() {
     const barrasRef = ref(null)
-    const pastelRef = ref(null)
     const fechaFormateada = ref('')
     const horaFormateada = ref('')
 
-    // Arrays de datos para todo el dashboard
+    // Gráfica de barras: datos dinámicos desde el endpoint
     const datosBarras = ref({
       labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-      data: [80, 95, 110, 105, 120, 130, 90]
+      data: [0, 0, 0, 0, 0, 0, 0]
     })
-    const datosPastel = ref({
-      labels: ['Área Kids Funcional', 'Funcional Adultos', 'Área de Pesas', 'Área de Fisioterapia'],
-      data: [40, 55, 80, 25]
-    })
+    async function cargarEntradasSemana() {
+      try {
+        const response = await fetch('http://localhost:8080/backend/public/api/gym/entradas/semana')
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          datosBarras.value.labels = data.map(d => d.dia)
+          datosBarras.value.data = data.map(d => d.cantidad)
+        }
+      } catch (e) {
+        // Si hay error, deja los datos en cero
+      }
+    }
+    // Tarjetas KPI: datos dinámicos desde el endpoint
+    function formatCurrency(value) {
+      return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 })
+    }
     const kpis = ref([
-      { titulo: 'Ventas del día', valor: '$1,250.00', icono: 'attach_money' },
-      { titulo: 'Ventas del mes', valor: '$32,000.00', icono: 'calendar_today' },
-      { titulo: 'Clientes registrados', valor: '182', icono: 'people' },
-      { titulo: 'Membresías activas', valor: '95', icono: 'card_membership' },
-      { titulo: 'Asistencias hoy', valor: '54', icono: 'how_to_reg' },
-      { titulo: 'Membresías por vencer', valor: '7', icono: 'event_busy' },
+      { titulo: 'Ventas del día', valor: '...', icono: 'attach_money' },
+      { titulo: 'Ventas del mes', valor: '...', icono: 'calendar_today' },
+      { titulo: 'Clientes registrados', valor: '...', icono: 'people' },
+      { titulo: 'Membresías activas', valor: '...', icono: 'card_membership' },
+      { titulo: 'Asistencias hoy', valor: '...', icono: 'how_to_reg' },
+      { titulo: 'Membresías por vencer', valor: '...', icono: 'event_busy' },
     ])
+    async function cargarKpisDashboard() {
+      try {
+        const response = await fetch('http://localhost:8080/backend/public/api/gym/dashboard')
+        const data = await response.json()
+        if (data && typeof data === 'object') {
+          kpis.value = [
+            { titulo: 'Ventas del día', valor: formatCurrency(data.ventas_dia), icono: 'attach_money' },
+            { titulo: 'Ventas del mes', valor: formatCurrency(data.ventas_mes), icono: 'calendar_today' },
+            { titulo: 'Clientes registrados', valor: data.clientes_registrados, icono: 'people' },
+            { titulo: 'Membresías activas', valor: data.membresias_activas, icono: 'card_membership' },
+            { titulo: 'Asistencias hoy', valor: data.asistencias_hoy, icono: 'how_to_reg' },
+            { titulo: 'Membresías por vencer', valor: data.membresias_por_vencer, icono: 'event_busy' },
+          ]
+        }
+      } catch (e) {
+        // Si hay error, deja los valores en '...'
+      }
+    }
     const accesos = ref([
       { label: 'Registrar asistencia', icono: 'how_to_reg', ruta: '#' },
       { label: 'Nueva membresía', icono: 'card_membership', ruta: '#' },
@@ -260,13 +151,18 @@ export default {
     }
 
     let intervalo = null
-    onMounted(() => {
+    let chartInstance = null
+    onMounted(async () => {
       // Inicializar reloj y fecha
       actualizarFechaHora()
       intervalo = setInterval(actualizarFechaHora, 1000)
 
+      await Promise.all([
+        cargarEntradasSemana(),
+        cargarKpisDashboard()
+      ])
       // Gráfica de barras: Entradas al gimnasio
-      new Chart(barrasRef.value, {
+      chartInstance = new Chart(barrasRef.value, {
         type: 'bar',
         data: {
           labels: datosBarras.value.labels,
@@ -305,40 +201,6 @@ export default {
           }
         }
       })
-      // Gráfica de pastel: Entradas a áreas
-      new Chart(pastelRef.value, {
-        type: 'pie',
-        data: {
-          labels: datosPastel.value.labels,
-          datasets: [{
-            data: datosPastel.value.data,
-            backgroundColor: [
-              '#1a1d2b', '#e5dada', '#333', '#02040f'
-            ],
-            borderColor: [
-              '#02040f', '#333', '#1a1d2b', '#e5dada'
-            ],
-            borderWidth: 2,
-            pointBackgroundColor: '#1a1d2b',
-            pointBorderColor: '#e5dada',
-            pointRadius: 6,
-            pointHoverRadius: 8
-          }]
-        },
-        options: {
-          plugins: {
-            legend: {
-              labels: { color: '#1a1d2b', font: { weight: 'bold', size: 10 } }
-            },
-            title: {
-              display: true,
-              text: 'Entradas a áreas',
-              color: '#1a1d2b',
-              font: { size: 16, weight: 'bold' }
-            }
-          }
-        }
-      })
     })
 
     onUnmounted(() => {
@@ -347,11 +209,9 @@ export default {
 
     return {
       barrasRef,
-      pastelRef,
       fechaFormateada,
       horaFormateada,
       datosBarras,
-      datosPastel,
       kpis: kpis.value,
       accesos: accesos.value,
       membresiasPorVencer: membresiasPorVencer.value,

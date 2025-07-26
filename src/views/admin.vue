@@ -212,15 +212,15 @@ export default {
       fechaFormateada,
       horaFormateada,
       datosBarras,
-      kpis: kpis.value,
-      accesos: accesos.value,
-      membresiasPorVencer: membresiasPorVencer.value,
-      ultimosClientes: ultimosClientes.value,
-      productosMasVendidos: productosMasVendidos.value,
-      productosStockBajo: productosStockBajo.value
+      kpis,
+      accesos,
+      membresiasPorVencer,
+      ultimosClientes,
+      productosMasVendidos,
+      productosStockBajo
     }
   },
-  // Eliminado data(), todo se gestiona por arrays en setup
+
 }
 </script>
 

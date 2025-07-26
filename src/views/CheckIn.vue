@@ -83,7 +83,7 @@ onUnmounted(() => {
 const verificarTelefono = async () => {
   if (!telefono.value) return;
   try {
-    const res = await fetch('https://chemisetteoaxaca.online/backend/public/api/gym/acceso', {
+    const res = await fetch('http://localhost:8080/backend/public/api/gym/acceso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telefono: telefono.value })

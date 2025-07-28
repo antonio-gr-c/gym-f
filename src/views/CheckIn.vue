@@ -116,6 +116,8 @@ const verificarTelefono = async () => {
           <p>${dias <= 5 ? `Tu membresía está por vencer. Faltan <strong>${dias} día(s)</strong>.` : `Faltan <strong>${dias} día(s)</strong> de membresía.`}</p>
           <hr/>
           <p><strong>Plan:</strong> ${data.paquete || ''}</p>
+          ${data.promocion ? `<p><strong>Promoción:</strong> ${data.promocion}</p>` : ''}
+          ${data.descuento ? `<p><strong>Descuento:</strong> ${Number(data.descuento).toFixed(2)}%</p>` : ''}
         `
       });
     }

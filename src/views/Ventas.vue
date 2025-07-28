@@ -873,13 +873,20 @@ export default {
       if (paquete) {
         try {
           const total = (paquete.precio * paquete.cantidad * (1 - (paquete.descuento || 0) / 100)).toFixed(2)
+          // Buscar id_promocion si hay promoción seleccionada
+          let id_promocion = null;
+          if (paquete.promocion) {
+            const promo = this.promociones.find(p => p.nombre === paquete.promocion);
+            if (promo && promo.id) id_promocion = promo.id;
+          }
           const body = {
             id_paquete: paquete.id,
             id_cliente: this.selectedClienteId,
             meses: paquete.cantidad,
             precio: total,
             total: total,
-            descuento: paquete.descuento || 0
+            descuento: paquete.descuento || 0,
+            id_promocion: id_promocion
           };
           const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/paquetes', {
             method: 'POST',

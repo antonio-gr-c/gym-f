@@ -16,7 +16,7 @@
       <div class="card tarjeta-kpi p-4 mb-4">
         <h5 class="mb-3 d-flex align-items-center">
           <i class="material-icons me-2">inventory_2</i>
-          {{ tituloLista }}
+          Paquetes activos
         </h5>
         <div class="row align-items-center">
           <div class="col-md-6 mb-2">
@@ -26,13 +26,16 @@
               <button class="btn" :class="filtroPaquetes === 'todos' ? 'btn-info' : 'btn-outline-info'" @click="cambiarFiltroPaquete('todos')">Todos</button>
             </div>
           </div>
-          <div class="col-md-6 mb-2 d-flex justify-content-end">
-            <div class="input-group">
+          <div class="col-md-6 mb-2 d-flex justify-content-end align-items-center gap-2">
+            <div class="input-group me-2">
               <input type="text" class="form-control" placeholder="Buscar paquete..." v-model="terminoBusquedaPaquete" />
               <button class="btn btn-outline-secondary" @click="terminoBusquedaPaquete = ''">
                 <i class="material-icons">clear</i>
               </button>
             </div>
+            <button class="btn btn-success" @click="abrirModalPaquete">
+              <i class="material-icons me-1">add_box</i> Agregar Paquete
+            </button>
           </div>
         </div>
       </div>
@@ -59,17 +62,9 @@
                   <label class="form-label">Precio</label>
                   <input v-model.number="nuevoPaquete.precio" type="number" step="0.01" class="form-control" placeholder="Ejemplo: 250.00" min="0" />
                 </div>
-                <div class="col-md-3 mb-3">
-                  <label class="form-label">Duración</label>
-                  <input v-model.number="nuevoPaquete.duracionCantidad" type="number" class="form-control" min="1" placeholder="Cantidad" />
-                </div>
-                <div class="col-md-3 mb-3">
-                  <label class="form-label">Unidad</label>
-                  <select v-model="nuevoPaquete.duracionUnidad" class="form-select">
-                    <option value="Días">Días</option>
-                    <option value="Semanas">Semanas</option>
-                    <option value="Meses">Meses</option>
-                  </select>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Cantidad de días</label>
+                  <input v-model.number="nuevoPaquete.duracionCantidad" type="number" class="form-control" min="1" placeholder="Ejemplo: 30" />
                 </div>
                 <div class="col-12 mb-3">
                   <label class="form-label">Servicios incluidos</label>
@@ -91,30 +86,7 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Tipo de paquete</label>
-                  <select v-model="nuevoPaquete.tipoPaquete" class="form-select">
-                    <option value="Regular">Regular</option>
-                    <option value="Promoción por meses">Promoción por meses</option>
-                    <option value="Promoción estacional">Promoción estacional</option>
-                  </select>
-                </div>
-                <div class="col-md-6 mb-3" v-if="nuevoPaquete.tipoPaquete !== 'Regular'">
-                  <label class="form-label">Datos de promoción</label>
-                  <div class="input-group mb-2">
-                    <span class="input-group-text">Descuento (%)</span>
-                    <input v-model.number="nuevoPaquete.descuento" type="number" class="form-control" min="0" max="100" placeholder="Ejemplo: 10" />
-                  </div>
-                  <div class="input-group mb-2">
-                    <span class="input-group-text">Precio especial</span>
-                    <input v-model.number="nuevoPaquete.precioEspecial" type="number" step="0.01" class="form-control" min="0" placeholder="Ejemplo: 200.00" />
-                  </div>
-                  <div class="mb-2">
-                    <label class="form-label">Fecha inicio</label>
-                    <input v-model="nuevoPaquete.fechaInicio" type="date" class="form-control" />
-                  </div>
-                  <div>
-                    <label class="form-label">Fecha fin</label>
-                    <input v-model="nuevoPaquete.fechaFin" type="date" class="form-control" />
-                  </div>
+                  <input type="text" class="form-control" value="Regular" readonly />
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Estado</label>
@@ -429,7 +401,7 @@ function abrirModalPaquete() {
 }
 
 async function agregarPaqueteModal() {
-  if (!nuevoPaquete.value.nombre || !nuevoPaquete.value.precio || !nuevoPaquete.value.duracionCantidad || !nuevoPaquete.value.duracionUnidad) {
+  if (!nuevoPaquete.value.nombre || !nuevoPaquete.value.precio || !nuevoPaquete.value.duracionCantidad) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa los campos obligatorios.' })
     return
   }
@@ -458,20 +430,15 @@ async function agregarPaqueteModal() {
   const payload = {
     nombre: nuevoPaquete.value.nombre,
     descripcion: nuevoPaquete.value.descripcion,
-    precio: nuevoPaquete.value.precio,
-    duracion: nuevoPaquete.value.duracionCantidad,
-    unidad: nuevoPaquete.value.duracionUnidad,
-    tipo_paquete: nuevoPaquete.value.tipoPaquete,
-    estado: nuevoPaquete.value.estado === 'Activo' ? 1 : 0,
+    precio: Number(nuevoPaquete.value.precio),
+    duracion: Number(nuevoPaquete.value.duracionCantidad),
+    unidad: 'días',
     // Servicios
     ...Object.fromEntries(Object.entries(servicios).map(([k, v]) => [v, nuevoPaquete.value.serviciosIncluidos.includes(k)])),
     // Áreas
     ...Object.fromEntries(Object.entries(areas).map(([k, v]) => [v, nuevoPaquete.value.areasAcceso.includes(k)])),
-    // Promoción
-    descuento: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.descuento : '',
-    precio_especial: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.precioEspecial : '',
-    fecha_inicio: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaInicio : '',
-    fecha_fin: nuevoPaquete.value.tipoPaquete !== 'Regular' ? nuevoPaquete.value.fechaFin : ''
+    tipo_paquete: 'regular',
+    estado: nuevoPaquete.value.estado === 'Activo' ? true : false
   }
 
   try {
@@ -491,7 +458,7 @@ async function agregarPaqueteModal() {
       descripcion: '',
       precio: '',
       duracionCantidad: 1,
-      duracionUnidad: 'Meses',
+      duracionUnidad: 'Días',
       serviciosIncluidos: [],
       areasAcceso: [],
       tipoPaquete: 'Regular',
@@ -516,7 +483,7 @@ const nuevoPaquete = ref({
   descripcion: '',
   precio: '',
   duracionCantidad: 1,
-  duracionUnidad: 'Meses',
+  duracionUnidad: 'Días',
   serviciosIncluidos: [],
   areasAcceso: [],
   tipoPaquete: 'Regular',
@@ -531,6 +498,8 @@ const paquetes = ref([])
 
 async function cargarPaquetes() {
   try {
+    // Llamar al endpoint para actualizar días restantes antes de cargar la lista
+    await fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', { method: 'GET' });
     const response = await fetch('http://localhost:8080/backend/public/api/gym/paquetes')
     if (!response.ok) throw new Error('No se pudo obtener la lista de paquetes')
     const data = await response.json()

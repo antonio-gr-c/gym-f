@@ -91,6 +91,11 @@ export default {
     ])
     async function cargarKpisDashboard() {
       try {
+        // Ejecutar el endpoint de actualizar días restantes antes de cargar dashboard
+        fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', {
+          method: 'GET'
+        }).catch(() => {})
+
         const response = await fetch('http://localhost:8080/backend/public/api/gym/dashboard')
         const data = await response.json()
         if (data && typeof data === 'object') {

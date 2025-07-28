@@ -279,6 +279,27 @@ function abrirModalCliente() {
   }
 }
 
+async function cargarClientes() {
+  try {
+    // Llamar al endpoint para actualizar días restantes antes de cargar la lista
+    await fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', { method: 'GET' });
+    const res = await fetch('http://localhost:8080/backend/public/api/gym/clientes/paquetes')
+    if (!res.ok) throw new Error('No se pudo cargar la lista de clientes')
+    const data = await res.json()
+    clientes.value = data.map(c => ({
+      id: c.id_cliente,
+      nombre: c.nombre_completo,
+      edad: c.edad,
+      telefono: c.telefono || '',
+      paquete: c.paquete || 'No especificado',
+      diasRestantes: c.dias_restantes !== null && c.dias_restantes !== undefined ? c.dias_restantes : 'N/A',
+      activo: c.activo === undefined ? (c.dias_restantes > 0) : !!c.activo
+    }))
+  } catch (e) {
+    Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
+  }
+}
+
 async function agregarClienteModal() {
   if (!nuevoCliente.value.nombre || !nuevoCliente.value.apellidoPaterno || !nuevoCliente.value.apellidoMaterno || !nuevoCliente.value.edad || !nuevoCliente.value.telefono) {
     Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
@@ -313,6 +334,8 @@ async function agregarClienteModal() {
       if (modal) {
         window.bootstrap.Modal.getInstance(modal).hide()
       }
+      // Recargar la tabla automáticamente
+      await cargarClientes()
     } else {
       Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo agregar el cliente.' })
     }
@@ -338,22 +361,7 @@ const clientes = ref([])
 onMounted(async () => {
   actualizarFechaHora()
   intervalo = setInterval(actualizarFechaHora, 1000)
-  try {
-    const res = await fetch('http://localhost:8080/backend/public/api/gym/clientes/paquetes')
-    if (!res.ok) throw new Error('No se pudo cargar la lista de clientes')
-    const data = await res.json()
-    clientes.value = data.map(c => ({
-      id: c.id_cliente,
-      nombre: c.nombre_completo,
-      edad: c.edad,
-      telefono: c.telefono || '',
-      paquete: c.paquete || 'No especificado',
-      diasRestantes: c.dias_restantes !== null && c.dias_restantes !== undefined ? c.dias_restantes : 'N/A',
-      activo: c.activo === undefined ? (c.dias_restantes > 0) : !!c.activo
-    }))
-  } catch (e) {
-    Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
-  }
+  await cargarClientes()
 })
 
 const clientesOrdenados = computed(() => {

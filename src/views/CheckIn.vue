@@ -83,6 +83,11 @@ onUnmounted(() => {
 const verificarTelefono = async () => {
   if (!telefono.value) return;
   try {
+    // Ejecutar el endpoint de actualizar días restantes antes o después del checkin
+    fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', {
+      method: 'GET'
+    }).catch(() => {})
+
     const res = await fetch('http://localhost:8080/backend/public/api/gym/acceso', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -90,7 +95,7 @@ const verificarTelefono = async () => {
     });
     const data = await res.json();
     if (!res.ok) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Error de servidor' });
+      Swal.fire({ icon: 'error', title: 'Cliente no encontrado', text: 'No se encontró un cliente con ese teléfono.' });
       return;
     }
     if (!data.acceso) {

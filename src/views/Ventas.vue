@@ -113,7 +113,6 @@
                 <tr>
                   <th>Nombre</th>
                   <th>Cantidad</th>
-                  <th>Meses</th>
                   <th>Precio</th>
                   <th>Descuento %</th>
                   <th>Promoción</th>
@@ -125,21 +124,15 @@
                 <tr v-for="(item, idx) in ticketPaginado" :key="item.id + '-' + idx">
                   <td>{{ item.nombre }}</td>
                   <td class="text-center">
-                    <span v-if="item.tipo === 'servicio' || (item.tipo === 'paquete' && item.id < 10)">1</span>
+                    <span v-if="item.tipo === 'servicio'">1</span>
                     <input
-                      v-else-if="item.tipo === 'producto'"
+                      v-else-if="item.tipo === 'producto' || item.tipo === 'paquete'"
                       type="number"
                       min="1"
                       class="form-control form-control-sm text-center"
                       v-model.number="item.cantidad"
                       @input="actualizarTotales"
                     />
-                    <span v-else-if="item.tipo === 'paquete' && item.id >= 10">1</span>
-                  </td>
-                  <td class="text-center">
-                    <span v-if="item.tipo !== 'paquete'">-</span>
-                    <span v-else-if="[1,2,3].includes(item.id)">-</span>
-                    <input v-else type="number" min="1" class="form-control form-control-sm text-center" v-model.number="item.meses" @input="actualizarTotales" />
                   </td>
                   <td class="text-center">${{ item.precio }}</td>
                   <td class="text-center">
@@ -729,13 +722,13 @@ export default {
           this.selectedClienteId = '';
         }
         // Revisar si ya hay un paquete diferente en el ticket
-        const paqueteEnTicket = this.ticket.find(i => i.tipo === 'paquete');
-        if (paqueteEnTicket && paqueteEnTicket.id !== producto.id) {
+        const paqueteEnTicket = this.ticket.find(i => i.tipo === 'paquete' && i.id !== producto.id);
+        if (paqueteEnTicket) {
           Swal.fire('Solo un paquete', 'No puedes elegir dos paquetes diferentes en el mismo ticket', 'warning');
           return;
         }
         // Si ya existe el mismo paquete, aumentar cantidad
-        const existe = this.ticket.find(i => i.id === producto.id);
+        const existe = this.ticket.find(i => i.tipo === 'paquete' && i.id === producto.id);
         if (existe) {
           existe.cantidad++;
         } else {
@@ -746,8 +739,7 @@ export default {
             precio: producto.precio,
             cantidad: 1,
             descuento: 0,
-            mascota_id: '',
-            meses: producto.id === 0 ? '' : 1
+            mascota_id: ''
           });
         }
         return;
@@ -776,9 +768,6 @@ export default {
 
     calcularTotalLinea(item) {
       let total = item.precio * item.cantidad;
-      if (item.tipo === 'paquete' && item.id !== 0) {
-        total = item.precio * item.cantidad * (item.meses || 1);
-      }
       total = total * (1 - (item.descuento || 0) / 100);
       return total.toFixed(2);
     },
@@ -814,13 +803,16 @@ export default {
           continue
         }
         try {
+          // Calcular total
+          const total = (item.precio * item.cantidad * (1 - (item.descuento || 0) / 100)).toFixed(2)
           // Registrar venta de producto
           const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/productos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               cantidad: item.cantidad,
-              precio: item.precio,
+              precio: total,
+              total: total,
               descuento: item.descuento,
               id_producto: item.id
             })
@@ -854,9 +846,9 @@ export default {
           const total = (item.precio * item.cantidad * (1 - (item.descuento || 0) / 100)).toFixed(2)
           const body = {
             cantidad: item.cantidad,
-            precio: item.precio,
-            descuento: item.descuento,
+            precio: total,
             total: total,
+            descuento: item.descuento,
             fecha: item.fecha_servicio,
             id_servicio: item.id,
             id_cliente: this.selectedClienteId
@@ -880,11 +872,13 @@ export default {
       const paquete = this.ticket.find(i => i.tipo === 'paquete');
       if (paquete) {
         try {
+          const total = (paquete.precio * paquete.cantidad * (1 - (paquete.descuento || 0) / 100)).toFixed(2)
           const body = {
             id_paquete: paquete.id,
             id_cliente: this.selectedClienteId,
-            meses: paquete.id === 0 ? undefined : paquete.meses,
-            precio: paquete.precio,
+            meses: paquete.cantidad,
+            precio: total,
+            total: total,
             descuento: paquete.descuento || 0
           };
           const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/paquetes', {

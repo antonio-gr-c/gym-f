@@ -115,8 +115,8 @@ onBeforeUnmount(() => {
 }
 
 .logo-sidebar {
-  width: 60px;
-  height: 60px;
+  width: 90px;
+  height: 90px;
   object-fit: contain;
 }
 

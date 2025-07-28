@@ -286,6 +286,8 @@ const clientes = ref([])
 
 async function cargarProductos() {
   try {
+    // Llamar al endpoint para actualizar días restantes antes de cargar la lista
+    await fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', { method: 'GET' });
     const response = await fetch('http://localhost:8080/backend/public/api/gym/productos')
     if (!response.ok) throw new Error('No se pudo obtener la lista de productos')
     const productos = await response.json()

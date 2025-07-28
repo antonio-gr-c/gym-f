@@ -48,6 +48,11 @@ const iniciarSesion = async () => {
   }
 
   try {
+    // Ejecutar el endpoint de actualizar días restantes antes o después del login
+    fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', {
+      method: 'GET'
+    }).catch(() => {})
+
     const response = await fetch('http://localhost:8080/backend/public/api/gym/login', {
       method: 'POST',
       headers: {

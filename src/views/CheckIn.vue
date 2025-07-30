@@ -36,7 +36,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import Swal from 'sweetalert2'
-import logo from '../assets/images/logo.png'
+import logo from '../assets/images/logo.jpg'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 

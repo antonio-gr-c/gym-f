@@ -31,7 +31,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import logo from '../assets/images/logo.png'
+import logo from '../assets/images/logo.jpg'
 
 const usuario = ref('')
 const contrasena = ref('')

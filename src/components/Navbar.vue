@@ -46,7 +46,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import logo from '../assets/images/logo.png'
+import logo from '../assets/images/logo.jpg'
 
 const menu = ref([
   { nombre: 'Administración', ruta: '/admin', icono: 'admin_panel_settings' },
@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
 .sidebar {
   width: 240px;
   height: 100vh;
-  background-color: #0f111a;
+  background-color: #000000;
   color: #fff;
   position: fixed;
   top: 0;

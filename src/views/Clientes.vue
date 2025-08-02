@@ -119,6 +119,9 @@
               <button class="btn btn-sm btn-outline-warning" title="Editar" @click="editarCliente(cliente)">
                 <i class="material-icons">edit</i>
               </button>
+              <button class="btn btn-sm btn-outline-danger" title="Desactivar cliente" @click="eliminarCliente(cliente.id)">
+                <i class="material-icons">delete</i>
+              </button>
             </div>
           </td>
         </tr>
@@ -293,7 +296,7 @@ async function cargarClientes() {
       telefono: c.telefono || '',
       paquete: c.paquete || 'No especificado',
       diasRestantes: c.dias_restantes !== null && c.dias_restantes !== undefined ? c.dias_restantes : 'N/A',
-      activo: c.activo === undefined ? (c.dias_restantes > 0) : !!c.activo
+      activo: c.dias_restantes <= 0 ? false : !!c.activo
     }))
   } catch (e) {
     Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
@@ -410,18 +413,37 @@ const agregarCliente = () => {
 async function eliminarCliente(id) {
   const cliente = clientes.value.find(c => c.id === id);
   if (!cliente) return;
+  
+  // Restricción para reactivar si no tiene paquete activo
+  if (!cliente.activo && cliente.diasRestantes <= 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'No se puede reactivar',
+      text: 'El cliente no tiene un paquete activo, por lo que no puede reactivarse a menos que renueve o adquiera uno.'
+    });
+    return;
+  }
+  
   const accion = cliente.activo ? 'desactivar' : 'activar';
   const confirmText = cliente.activo ? 'Sí, desactivar' : 'Sí, activar';
-  const title = cliente.activo ? '¿Seguro que deseas desactivar este cliente?' : '¿Seguro que deseas activar este cliente?';
+  const title = cliente.activo 
+    ? '¿Seguro que deseas desactivar este cliente?' 
+    : '¿Seguro que deseas activar este cliente?';
+  const text = cliente.activo
+    ? 'La membresía del cliente se pausará y no se descontarán días mientras esté desactivado.'
+    : 'La membresía del cliente se reactivará y los días restantes continuarán descontándose normalmente.';
   const icon = cliente.activo ? 'warning' : 'question';
+  
   const result = await Swal.fire({
     title,
+    text,
     icon,
     showCancelButton: true,
     confirmButtonText: confirmText,
     cancelButtonText: 'Cancelar',
     reverseButtons: true
   });
+  
   if (result.isConfirmed) {
     try {
       const res = await fetch(`http://localhost:8080/backend/public/api/gym/clientes/estado/${id}`, {
@@ -429,20 +451,41 @@ async function eliminarCliente(id) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
+      
       if (res.ok) {
         // Cambiar estado localmente
         cliente.activo = !cliente.activo;
-        Swal.fire({ icon: 'success', title: data.mensaje || 'Estado actualizado', showConfirmButton: false, timer: 1200 });
+        Swal.fire({ 
+          icon: 'success', 
+          title: data.mensaje || 'Estado actualizado', 
+          text: cliente.activo 
+            ? 'La membresía ha sido reactivada.' 
+            : 'La membresía ha sido pausada.',
+          showConfirmButton: false, 
+          timer: 1500 
+        });
+        
         // Cerrar master-detail si el cliente estaba abierto
         if (clienteDetalle.value && clienteDetalle.value.id === id) {
           clienteDetalle.value = null;
           editandoDetalle.value = false;
         }
+        
+        // Actualizar lista de clientes
+        await cargarClientes();
       } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el estado.' });
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: data.error || 'No se pudo actualizar el estado.' 
+        });
       }
     } catch (e) {
-      Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'No se pudo conectar al servidor. Intenta más tarde.' });
+      Swal.fire({ 
+        icon: 'error', 
+        title: 'Error de conexión', 
+        text: 'No se pudo conectar al servidor. Intenta más tarde.' 
+      });
     }
   }
 }

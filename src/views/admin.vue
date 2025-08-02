@@ -15,11 +15,12 @@
       </div>
     </div>
 
-    <!-- Gráfica de barras: Entradas al gimnasio -->
-    <div class="row mb-4 justify-content-center">
-      <div class="col-12 mb-3 d-flex justify-content-center">
-        <div class="card grafica-blanca h-100 w-100" style="max-width: 700px; margin: 0 auto;">
-          <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center">
+
+    <!-- Gráfica de barras y tabla de días inhábiles -->
+    <div class="row mb-4 justify-content-center align-items-stretch">
+      <div class="col-lg-7 col-md-12 mb-3 d-flex align-items-stretch">
+        <div class="card grafica-blanca flex-fill d-flex flex-column justify-content-center align-items-center" style="max-width: 700px; margin-left:auto; margin-right:auto; width:100%;">
+          <div class="card-body p-4 d-flex flex-column align-items-center justify-content-center w-100">
             <h6 class="card-title d-flex align-items-center mb-3" style="color:#1a1d2b;font-weight:bold; font-size:1.3rem;">
               <i class="material-icons me-2" style="font-size:1.5rem;">bar_chart</i>
               Entradas al gimnasio
@@ -28,8 +29,56 @@
           </div>
         </div>
       </div>
+      <div class=" d-flex align-items-stretch">
+        <div class="card grafica-blanca flex-fill d-flex flex-column justify-content-center align-items-center" style="min-height: 220px; margin-left:auto; margin-right:auto; width:100%;">
+          <div class="card-body p-3 w-100 ">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="card-title mb-0" style="color:#1a1d2b;font-weight:bold; font-size:1.1rem;">
+                <i class="material-icons me-2" style="font-size:1.3rem;">event_busy</i>
+                Días inhábiles
+              </h6>
+              <button class="btn btn-sm btn-primary" @click="mostrarAgregarDia = !mostrarAgregarDia">
+                <i class="material-icons" style="font-size:1.1rem;">add</i>
+              </button>
+            </div>
+            <div v-if="mostrarAgregarDia" class="mb-2">
+              <form @submit.prevent="agregarDiaInhabil">
+                <div class="input-group input-group-sm mb-1">
+                  <input type="date" v-model="nuevoDia.fecha" class="form-control" required>
+                  <input type="text" v-model="nuevoDia.descripcion" class="form-control" placeholder="Descripción" required>
+                  <button class="btn btn-success" type="submit"><i class="material-icons" style="font-size:1.1rem;">check</i></button>
+                  <button class="btn btn-secondary" type="button" @click="mostrarAgregarDia = false"><i class="material-icons" style="font-size:1.1rem;">close</i></button>
+                </div>
+              </form>
+            </div>
+            <div class="tabla-scroll" style="max-height: 160px; overflow-y:auto;">
+              <table class="table table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th style="font-size:0.95rem;">Fecha</th>
+                    <th style="font-size:0.95rem;">Descripción</th>
+                    <th style="width:32px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="dia in diasInhabiles" :key="dia.id">
+                    <td>{{ dia.fecha }}</td>
+                    <td>{{ dia.descripcion }}</td>
+                    <td>
+                      <button class="btn btn-sm btn-danger" @click="eliminarDiaInhabil(dia.id)"><i class="material-icons" style="font-size:1.1rem;">delete</i></button>
+                    </td>
+                  </tr>
+                  <tr v-if="diasInhabiles.length === 0">
+                    <td colspan="3" class="text-center text-muted">Sin días inhábiles</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <!-- Fin de gráfica de barras -->
+    <!-- Fin de gráfica de barras y tabla de días inhábiles -->
 
 
     <!-- Tarjetas KPI -->
@@ -49,9 +98,11 @@
   </div>
 </template>
 
+
 <script>
 import { onMounted, ref, onUnmounted } from 'vue'
 import Chart from 'chart.js/auto'
+import Swal from 'sweetalert2'
 
 export default {
   components: {  },
@@ -112,6 +163,125 @@ export default {
         // Si hay error, deja los valores en '...'
       }
     }
+    // Días inhábiles
+    const diasInhabiles = ref([])
+    const mostrarAgregarDia = ref(false)
+    const nuevoDia = ref({ fecha: '', descripcion: '' })
+
+    async function cargarDiasInhabiles() {
+      try {
+        const response = await fetch('http://localhost:8080/backend/public/api/gym/dias-inhabiles')
+        const data = await response.json()
+        if (data && Array.isArray(data.dias_inhabiles)) {
+          diasInhabiles.value = data.dias_inhabiles
+        } else {
+          diasInhabiles.value = []
+        }
+      } catch (e) {
+        diasInhabiles.value = []
+      }
+    }
+
+
+    async function agregarDiaInhabil() {
+      if (!nuevoDia.value.fecha || !nuevoDia.value.descripcion.trim()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campos requeridos',
+          text: 'Debes ingresar una fecha y una descripción',
+          timer: 2000,
+          showConfirmButton: false
+        })
+        return
+      }
+      try {
+        const params = new URLSearchParams();
+        params.append('fecha', nuevoDia.value.fecha);
+        params.append('descripcion', nuevoDia.value.descripcion.trim());
+        console.log('Enviando:', Object.fromEntries(params));
+        const response = await fetch('http://localhost:8080/backend/public/api/gym/dias-inhabiles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params
+        });
+        const respData = await response.json().catch(() => ({}));
+        if (response.ok) {
+          await cargarDiasInhabiles();
+          mostrarAgregarDia.value = false;
+          nuevoDia.value = { fecha: '', descripcion: '' };
+          Swal.fire({
+            icon: 'success',
+            title: 'Agregado',
+            text: 'El día inhábil fue agregado correctamente',
+            timer: 1500,
+            showConfirmButton: false
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: respData?.error || 'No se pudo agregar el día inhábil',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        }
+      } catch (e) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo agregar el día inhábil',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    }
+
+
+    async function eliminarDiaInhabil(id) {
+      const result = await Swal.fire({
+        title: '¿Eliminar este día inhábil?',
+        text: 'Esta acción no se puede deshacer',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      })
+      if (!result.isConfirmed) return
+      try {
+        const response = await fetch(`http://localhost:8080/backend/public/api/gym/dias-inhabiles/${id}`, {
+          method: 'DELETE'
+        })
+        if (response.ok) {
+          await cargarDiasInhabiles()
+          Swal.fire({
+            icon: 'success',
+            title: 'Eliminado',
+            text: 'El día inhábil fue eliminado',
+            timer: 1500,
+            showConfirmButton: false
+          })
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo eliminar el día inhábil',
+            timer: 2000,
+            showConfirmButton: false
+          })
+        }
+      } catch (e) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo eliminar el día inhábil',
+          timer: 2000,
+          showConfirmButton: false
+        })
+      }
+    }
+
     const accesos = ref([
       { label: 'Registrar asistencia', icono: 'how_to_reg', ruta: '#' },
       { label: 'Nueva membresía', icono: 'card_membership', ruta: '#' },
@@ -157,6 +327,7 @@ export default {
 
     let intervalo = null
     let chartInstance = null
+
     onMounted(async () => {
       // Inicializar reloj y fecha
       actualizarFechaHora()
@@ -164,7 +335,8 @@ export default {
 
       await Promise.all([
         cargarEntradasSemana(),
-        cargarKpisDashboard()
+        cargarKpisDashboard(),
+        cargarDiasInhabiles()
       ])
       // Gráfica de barras: Entradas al gimnasio
       chartInstance = new Chart(barrasRef.value, {
@@ -222,7 +394,12 @@ export default {
       membresiasPorVencer,
       ultimosClientes,
       productosMasVendidos,
-      productosStockBajo
+      productosStockBajo,
+      diasInhabiles,
+      mostrarAgregarDia,
+      nuevoDia,
+      agregarDiaInhabil,
+      eliminarDiaInhabil
     }
   },
 
@@ -377,5 +554,9 @@ export default {
   max-width: 100%;
   display: block;
   margin: 0 auto;
+}
+
+.tabla-inhabiles{
+  margin-right: 100px;
 }
 </style>

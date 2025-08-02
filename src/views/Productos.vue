@@ -101,7 +101,7 @@
           <td>{{ producto.nombre }}</td>
           <td>${{ Number(producto.costo).toFixed(2) }}</td>
           <td>{{ producto.stockMinimo }}</td>
-          <td>{{ producto.stockActual }}</td>
+          <td :class="{'stock-bajo': producto.stockActual <= producto.stockMinimo}">{{ producto.stockActual }}</td>
           <td class="td-acciones">
             <div class="acciones-btns d-flex gap-1 justify-content-center">
               <button class="btn btn-sm btn-outline-warning" title="Editar" @click="editarCliente(producto)">
@@ -311,11 +311,11 @@ const clientesOrdenados = computed(() => {
   else if (filtroActivo.value === 'inactivos') filtrados = filtrados.filter(c => !c.activo)
 
   if (terminoBusqueda.value.trim()) {
-    const termino = terminoBusqueda.value.toLowerCase()
+    const termino = terminoBusqueda.value.toLowerCase();
     filtrados = filtrados.filter(c =>
       c.nombre.toLowerCase().includes(termino) ||
-      c.telefono.includes(termino)
-    )
+      (c.id && c.id.toString().toLowerCase().includes(termino))
+    );
   }
   return filtrados
 })
@@ -518,4 +518,10 @@ onUnmounted(() => {
 .acciones-btns {
   gap: 0.3rem !important;
 }
+/* Color rojo para stock bajo */
+.stock-bajo {
+  color: #ff4d4f;
+  font-weight: bold;
+}
 </style>
+

@@ -11,9 +11,9 @@
           <p class="m-0">{{ horaFormateada }}</p>
         </div>
       </div>
+    
 
-
-      <!-- Filtros y botón agregar producto -->
+      <!-- Filtros y botón agregar servicio -->
       <div class="card tarjeta-kpi p-4 mb-4">
         <h5 class="mb-3 d-flex align-items-center">
           <i class="material-icons me-2">inventory_2</i>
@@ -22,387 +22,425 @@
         <div class="row align-items-center">
           <div class="col-md-4 mb-2">
             <div class="btn-group" role="group">
-              <button class="btn" :class="filtroActivo === 'activos' ? 'btn-primary' : 'btn-outline-primary'" @click="cambiarFiltro('activos')">Activos</button>
-              <button class="btn" :class="filtroActivo === 'inactivos' ? 'btn-secondary' : 'btn-outline-secondary'" @click="cambiarFiltro('inactivos')">Inactivos</button>
-              <button class="btn" :class="filtroActivo === 'todos' ? 'btn-info' : 'btn-outline-info'" @click="cambiarFiltro('todos')">Todos</button>
+              <button 
+                v-for="filtro in filtros" 
+                :key="filtro.valor"
+                class="btn"
+                :class="filtroActivo === filtro.valor ? `btn-${filtro.color}` : `btn-outline-${filtro.color}`"
+                @click="cambiarFiltro(filtro.valor)"
+              >
+                {{ filtro.texto }}
+              </button>
             </div>
           </div>
           <div class="col-md-8 mb-2 d-flex align-items-center justify-content-end">
             <div class="input-group me-2">
-              <input type="text" class="form-control" placeholder="Buscar servicio..." v-model="terminoBusqueda" @input="filtrarClientes" />
-              <button class="btn btn-outline-secondary" @click="terminoBusqueda = ''; filtrarClientes()">
+              <input 
+                type="text" 
+                class="form-control" 
+                placeholder="Buscar servicio..." 
+                v-model="terminoBusqueda" 
+                @input="filtrarServicios" 
+              />
+              <button class="btn btn-outline-secondary" @click="limpiarBusqueda">
                 <i class="material-icons">clear</i>
               </button>
             </div>
-            <button class="btn btn-success" @click="abrirModalCliente">
-              <i class="material-icons me-1">add_box</i>
+            <button class="btn btn-success" @click="abrirModalServicio">
+              <i class="material-icons me-1">add_box</i> Nuevo
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Tabla de servicios -->
+      <div class="card tarjeta-tabla p-4">
+        <h5 class="mb-3 d-flex align-items-center">
+          <i class="material-icons me-2">table_view</i>
+          Listado de servicios
+        </h5>
+        <div class="tabla-scroll">
+          <table class="table table-hover tabla-clientes mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Costo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="servicio in serviciosFiltrados" :key="servicio.id">
+                <td>{{ servicio.id_servicio }}</td>
+                <td>{{ servicio.nombre }}</td>
+                <td>${{ Number(servicio.costo).toFixed(2) }}</td>
+                <td>
+                  <span :class="`badge bg-${servicio.activo ? 'success' : 'secondary'}`">
+                    {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="td-acciones">
+                  <div class="acciones-btns d-flex gap-1 justify-content-center">
+                    <button 
+                      class="btn btn-sm btn-outline-warning" 
+                      title="Editar" 
+                      @click="editarServicio(servicio)"
+                    >
+                      <i class="material-icons">edit</i>
+                    </button>
+                    <button 
+                      class="btn btn-sm btn-outline-danger" 
+                      title="Eliminar" 
+                      @click="cambiarEstadoServicio(servicio.id)"
+                    >
+                      <i class="material-icons">{{ servicio.activo ? 'toggle_off' : 'toggle_on' }}</i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="serviciosFiltrados.length === 0">
+                <td colspan="5" class="text-center text-muted">No hay servicios encontrados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      <!-- Modal para agregar servicio -->
-      <div class="modal fade" id="modalAgregarCliente" tabindex="-1" aria-labelledby="modalAgregarClienteLabel" aria-hidden="true">
+      <!-- Sección de servicios vendidos con paginación -->
+      <div class="card tarjeta-tabla p-4 mt-4">
+        <h5 class="mb-3 d-flex align-items-center">
+          <i class="material-icons me-2">event_available</i>
+          Servicios vendidos y agendados
+        </h5>
+        <div class="tabla-scroll">
+          <table class="table table-hover tabla-clientes mb-0">
+            <thead>
+              <tr>
+                <th>Servicio</th>
+                <th>Cliente</th>
+                <th>Fecha de venta</th>
+                <th>Fecha agendada</th>
+                <th>Precio</th>
+                <th>Cantidad</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="venta in ventasPaginadas" :key="venta.id_venta">
+                <td>{{ venta.nombre_servicio }}</td>
+                <td>{{ venta.nombre_cliente || 'No asignado' }}</td>
+                <td>{{ formatearFecha(venta.fecha) }}</td>
+                <td>{{ venta.fecha_agendada ? formatearFechaSoloDia(venta.fecha_agendada) : 'Inmediato' }}</td>
+                <td>${{ Number(venta.precio).toFixed(2) }}</td>
+                <td>{{ venta.cantidad }}</td>
+                <td>${{ Number(venta.total).toFixed(2) }}</td>
+              </tr>
+              <tr v-if="serviciosVendidos.length === 0">
+                <td colspan="7" class="text-center text-muted">No hay servicios vendidos/agendados para mostrar.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Controles de paginación -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <button class="btn btn-outline-light" :disabled="paginaActual === 1" @click="paginaActual--">
+            <i class="material-icons">chevron_left</i> Anterior
+          </button>
+          <span>Página {{ paginaActual }} de {{ totalPaginas }}</span>
+          <button class="btn btn-outline-light" :disabled="paginaActual === totalPaginas" @click="paginaActual++">
+            Siguiente <i class="material-icons">chevron_right</i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal para agregar/editar servicio -->
+      <div class="modal fade" id="modalServicio" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="modalAgregarClienteLabel">Agregar nuevo servicio</h5>
+              <h5 class="modal-title">{{ modalTitulo }}</h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-              <div class="row">
-                <div class="col-md-12 mb-3">
-                  <input v-model="nuevoCliente.nombre" type="text" class="form-control" placeholder="Nombre del servicio" />
+              <form @submit.prevent="guardarServicio">
+                <div class="mb-3">
+                  <label class="form-label">Nombre del servicio</label>
+                  <input 
+                    v-model="servicioForm.nombre" 
+                    type="text" 
+                    class="form-control" 
+                    required 
+                  />
                 </div>
-                <div class="col-md-12 mb-3">
-                  <input v-model.number="nuevoCliente.costo" type="number" class="form-control" placeholder="Costo" min="0" step="0.01" />
+                <div class="mb-3">
+                  <label class="form-label">Costo</label>
+                  <input 
+                    v-model.number="servicioForm.costo" 
+                    type="number" 
+                    class="form-control" 
+                    min="0" 
+                    step="0.01" 
+                    required 
+                  />
                 </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-              <button type="button" class="btn btn-success" @click="agregarClienteModal">Agregar Servicio</button>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="submit" class="btn btn-success">
+                    {{ servicioForm.id ? 'Actualizar' : 'Guardar' }}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
-
-      
-
-
-<!-- Tabla de productos -->
-<div class="card tarjeta-tabla p-4">
-  <h5 class="mb-3 d-flex align-items-center">
-    <i class="material-icons me-2">table_view</i>
-    Listado de productos
-  </h5>
-  <div class="tabla-scroll">
-    <table class="table table-hover tabla-clientes mb-0">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Costo</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="producto in clientesOrdenados" :key="producto.id">
-          <td>{{ producto.id }}</td>
-          <td>{{ producto.nombre }}</td>
-          <td>${{ Number(producto.costo).toFixed(2) }}</td>
-          <td class="td-acciones">
-            <div class="acciones-btns d-flex gap-1 justify-content-center">
-              <button class="btn btn-sm btn-outline-warning" title="Editar" @click="editarCliente(producto)">
-                <i class="material-icons">edit</i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" title="Eliminar" @click="eliminarCliente(producto.id)">
-                <i class="material-icons">delete</i>
-              </button>
-            </div>
-          </td>
-        </tr>
-        <tr v-if="clientesOrdenados.length === 0">
-          <td colspan="4" class="text-center text-muted">No hay servicios encontrados.</td>
-        </tr>
-      </tbody>
-    </table>
+    </div>
   </div>
-</div>
-
-
-   
-
-      <!-- Detalle master-detail fuera del listado para servicios -->
-      <div v-if="clienteDetalle" class="card tarjeta-tabla p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">Detalle de servicio</h5>
-          <button class="btn btn-sm btn-outline-secondary" @click="cancelarEdicionDetalle" title="Cerrar"><i class="material-icons">close</i></button>
-        </div>
-        <form v-if="editandoDetalle" @submit.prevent="guardarEdicionDetalle">
-          <div class="row">
-            <div class="col-md-6 mb-2">
-              <label class="form-label"><b>Nombre:</b></label>
-              <input v-model="clienteDetalle.nombre" type="text" class="form-control" />
-            </div>
-            <div class="col-md-6 mb-2">
-              <label class="form-label"><b>Costo:</b></label>
-              <input v-model.number="clienteDetalle.costo" type="number" class="form-control" min="0" step="0.01" />
-            </div>
-          </div>
-          <div class="text-end mt-3">
-            <button type="submit" class="btn btn-success me-2">Guardar cambios</button>
-            <button type="button" class="btn btn-secondary" @click="editandoDetalle = false">Cancelar</button>
-          </div>
-        </form>
-        <div v-else class="row">
-          <div class="col-md-6 mb-2"><b>Nombre:</b> {{ clienteDetalle.nombre }}</div>
-          <div class="col-md-6 mb-2"><b>Costo:</b> ${{ Number(clienteDetalle.costo).toFixed(2) }}</div>
-        </div>
-      </div>
-    </div> <!-- cierra container -->
-  </div> <!-- cierra contenido-principal -->
 </template>
 
 <script setup>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import Swal from 'sweetalert2'
 
-
-// Estado para el detalle master-detail editable
-const clienteDetalle = ref(null)
-const editandoDetalle = ref(false)
-
-
-
-function verDetalle(producto) {
-  clienteDetalle.value = {
-    ...producto
-  }
-  editandoDetalle.value = false
-}
-
-function editarCliente(producto) {
-  clienteDetalle.value = {
-    ...producto
-  }
-  editandoDetalle.value = true
-}
-
-async function guardarEdicionDetalle() {
-  if (!clienteDetalle.value.nombre || clienteDetalle.value.costo === '' || clienteDetalle.value.costo === null) {
-    await Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
-    return
-  }
-
-  try {
-    const response = await fetch(`http://localhost:8080/backend/public/api/gym/servicios/${clienteDetalle.value.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        nombre: clienteDetalle.value.nombre,
-        costo: clienteDetalle.value.costo,
-        activo: true // o false, según lo que tengas en el formulario o quieras conservar
-      })
-    })
-
-    const data = await response.json()
-
-    if (response.ok) {
-      const idx = clientes.value.findIndex(p => p.id === clienteDetalle.value.id)
-      if (idx !== -1) {
-        clientes.value[idx] = {
-          ...clientes.value[idx],
-          nombre: clienteDetalle.value.nombre,
-          costo: clienteDetalle.value.costo
-        }
-      }
-
-      await Swal.fire({ icon: 'success', title: 'Servicio actualizado', showConfirmButton: false, timer: 1200 })
-      editandoDetalle.value = false
-      clienteDetalle.value = null
-    } else {
-      await Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el servicio.' })
-    }
-  } catch (error) {
-    await Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo conectar al servidor.' })
-  }
-}
-
-
-function cancelarEdicionDetalle() {
-  clienteDetalle.value = null
-}
-
-// Modal control
-function abrirModalCliente() {
-  const modal = document.getElementById('modalAgregarCliente')
-  if (modal) {
-    new window.bootstrap.Modal(modal).show()
-  }
-}
-
-async function agregarClienteModal() {
-  if (!nuevoCliente.value.nombre || nuevoCliente.value.costo === '' || nuevoCliente.value.costo === null) {
-    Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
-    return
-  }
-  try {
-    const body = {
-      nombre: nuevoCliente.value.nombre,
-      costo: nuevoCliente.value.costo
-    }
-    const response = await fetch('http://localhost:8080/backend/public/api/gym/servicios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data.error || 'No se pudo agregar el servicio')
-    }
-    Swal.fire({ icon: 'success', title: 'Servicio agregado', showConfirmButton: false, timer: 1200 })
-    nuevoCliente.value = {
-      nombre: '',
-      costo: ''
-    }
-    // Cerrar modal
-    const modal = document.getElementById('modalAgregarCliente')
-    if (modal) {
-      window.bootstrap.Modal.getInstance(modal).hide()
-    }
-    // Refrescar la lista de servicios
-    await cargarServicios()
-  } catch (e) {
-    Swal.fire({ icon: 'error', title: 'Error', text: e.message || 'No se pudo agregar el servicio.' })
-  }
-}
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-
+// Estado reactivo
+const serviciosVendidos = ref([])
+const servicios = ref([])
 const terminoBusqueda = ref('')
 const filtroActivo = ref('activos')
-
-const nuevoCliente = ref({
-  nombre: '',
-  costo: ''
-})
-
-
-const clientes = ref([])
-
-async function cargarServicios() {
-  try {
-    // Llamar al endpoint para actualizar días restantes antes de cargar la lista
-    await fetch('http://localhost:8080/backend/public/api/gym/actualizar-dias-restantes', { method: 'GET' });
-    const response = await fetch('http://localhost:8080/backend/public/api/gym/servicios')
-    if (!response.ok) throw new Error('No se pudo obtener la lista de servicios')
-    const servicios = await response.json()
-    // Normalizar campos si es necesario
-    clientes.value = servicios.map(s => ({
-      id: s.id_servicio || s.id, // según cómo venga del backend
-      nombre: s.nombre,
-      costo: s.costo,
-      activo: s.activo !== undefined ? !!s.activo : true
-    }))
-  } catch (e) {
-    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo cargar la lista de servicios.' })
-  }
-}
-
-const clientesOrdenados = computed(() => {
-  let filtrados = [...clientes.value]
-  if (filtroActivo.value === 'activos') filtrados = filtrados.filter(c => c.activo)
-  else if (filtroActivo.value === 'inactivos') filtrados = filtrados.filter(c => !c.activo)
-
-  if (terminoBusqueda.value.trim()) {
-    const termino = terminoBusqueda.value.toLowerCase()
-    filtrados = filtrados.filter(c =>
-      c.nombre.toLowerCase().includes(termino) ||
-      c.telefono.includes(termino)
-    )
-  }
-  return filtrados
-})
-
-const cambiarFiltro = tipo => filtroActivo.value = tipo
-const filtrarClientes = () => {}
-
-const agregarCliente = () => {
-  if (!nuevoCliente.value.nombre || !nuevoCliente.value.apellidoPaterno || !nuevoCliente.value.apellidoMaterno || !nuevoCliente.value.edad || !nuevoCliente.value.telefono) {
-    Swal.fire({ icon: 'warning', title: 'Campos incompletos', text: 'Por favor completa todos los campos.' })
-    return
-  }
-  clientes.value.push({
-    id: clientes.value.length ? Math.max(...clientes.value.map(c => c.id)) + 1 : 1,
-    nombre: nuevoCliente.value.nombre,
-    apellidoPaterno: nuevoCliente.value.apellidoPaterno,
-    apellidoMaterno: nuevoCliente.value.apellidoMaterno,
-    edad: nuevoCliente.value.edad,
-    telefono: nuevoCliente.value.telefono,
-    activo: true
-  })
-  Swal.fire({ icon: 'success', title: 'Cliente agregado', showConfirmButton: false, timer: 1200 })
-  nuevoCliente.value = {
-    nombre: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    edad: '',
-    telefono: ''
-  }
-  mostrarFormulario.value = true
-}
-
-function eliminarCliente(id) {
-  Swal.fire({
-    title: '¿Seguro que deseas eliminar este cliente?',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true
-  }).then(async result => {
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`http://localhost:8080/backend/public/api/gym/servicios/estado/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        const data = await response.json()
-
-        if (response.ok) {
-          clientes.value = clientes.value.map(c =>
-            c.id === id ? { ...c, activo: !c.activo } : c
-          )
-          if (clienteDetalle.value && clienteDetalle.value.id === id) {
-            clienteDetalle.value = null
-            editandoDetalle.value = false
-          }
-          Swal.fire({ icon: 'success', title: data.mensaje || 'Estado actualizado', showConfirmButton: false, timer: 1200 })
-        } else {
-          Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo actualizar el estado del cliente' })
-        }
-      } catch (error) {
-        Swal.fire({ icon: 'error', title: 'Error de red', text: 'No se pudo conectar al servidor.' })
-      }
-    }
-  })
-}
-
-
-const tituloLista = computed(() => {
-  switch(filtroActivo.value) {
-    case 'activos': return 'Servicios Activos'
-    case 'inactivos': return 'Servicios Inactivos'
-    case 'todos': return 'Todos los Servicios'
-    default: return 'Servicios'
-  }
-})
-
 const fechaFormateada = ref('')
 const horaFormateada = ref('')
-let intervalo = null
+const servicioForm = ref({
+  id: null,
+  nombre: '',
+  costo: '',
+  activo: true
+})
+
+// Paginación para servicios vendidos
+const paginaActual = ref(1)
+const ventasPorPagina = 10
+const totalPaginas = computed(() => {
+  return Math.max(1, Math.ceil(serviciosVendidos.value.length / ventasPorPagina))
+})
+const ventasPaginadas = computed(() => {
+  const inicio = (paginaActual.value - 1) * ventasPorPagina
+  return serviciosVendidos.value.slice(inicio, inicio + ventasPorPagina)
+})
+
+// Resetear página si cambia la data
+watch(serviciosVendidos, () => {
+  paginaActual.value = 1
+})
+
+// Constantes
+const filtros = [
+  { valor: 'activos', texto: 'Activos', color: 'primary' },
+  { valor: 'inactivos', texto: 'Inactivos', color: 'secondary' },
+  { valor: 'todos', texto: 'Todos', color: 'info' }
+]
+
+// Computed
+const tituloLista = computed(() => {
+  return filtros.find(f => f.valor === filtroActivo.value)?.texto + ' Servicios'
+})
+
+const modalTitulo = computed(() => {
+  return servicioForm.value.id ? 'Editar Servicio' : 'Nuevo Servicio'
+})
+
+const serviciosFiltrados = computed(() => {
+  let resultado = [...servicios.value]
+  
+  // Aplicar filtro de estado
+  if (filtroActivo.value === 'activos') {
+    resultado = resultado.filter(s => s.activo)
+  } else if (filtroActivo.value === 'inactivos') {
+    resultado = resultado.filter(s => !s.activo)
+  }
+  
+  // Aplicar filtro de búsqueda
+  if (terminoBusqueda.value.trim()) {
+    const termino = terminoBusqueda.value.toLowerCase()
+    resultado = resultado.filter(s => 
+      s.nombre.toLowerCase().includes(termino) ||
+      (s.id_servicio && s.id_servicio.toString().includes(termino))
+    )
+  }
+  
+  return resultado
+})
+
+// Métodos
+function formatearFecha(fecha) {
+  if (!fecha) return '-'
+  return new Date(fecha).toLocaleString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function formatearFechaSoloDia(fecha) {
+  if (!fecha) return '-'
+  return new Date(fecha).toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
 
 function actualizarFechaHora() {
-  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
-  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
   const ahora = new Date()
-  fechaFormateada.value = `${dias[ahora.getDay()]}, ${ahora.getDate()} de ${meses[ahora.getMonth()]} de ${ahora.getFullYear()}`
+  fechaFormateada.value = ahora.toLocaleDateString('es-MX', { 
+    weekday: 'long', 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  })
   horaFormateada.value = ahora.toLocaleTimeString('es-MX', { hour12: false })
 }
 
+function cambiarFiltro(tipo) {
+  filtroActivo.value = tipo
+}
+
+function limpiarBusqueda() {
+  terminoBusqueda.value = ''
+}
+
+function filtrarServicios() {
+  // La búsqueda se maneja automáticamente con el computed
+}
+
+async function cargarServiciosVendidos() {
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/ventas/servicios')
+    if (!response.ok) throw new Error('Error al cargar servicios vendidos')
+    serviciosVendidos.value = await response.json()
+  } catch (error) {
+    mostrarError('No se pudo cargar el historial de servicios vendidos', error)
+  }
+}
+
+async function cargarServicios() {
+  try {
+    const response = await fetch('http://localhost:8080/backend/public/api/gym/servicios')
+    if (!response.ok) throw new Error('Error al cargar servicios')
+    servicios.value = await response.json()
+  } catch (error) {
+    mostrarError('No se pudo cargar la lista de servicios', error)
+  }
+}
+
+function abrirModalServicio(servicio = null) {
+  servicioForm.value = servicio 
+    ? { ...servicio } 
+    : { id: null, nombre: '', costo: '', activo: true }
+  
+  const modal = new bootstrap.Modal(document.getElementById('modalServicio'))
+  modal.show()
+}
+
+async function guardarServicio() {
+  try {
+    const url = servicioForm.value.id
+      ? `http://localhost:8080/backend/public/api/gym/servicios/${servicioForm.value.id}`
+      : 'http://localhost:8080/backend/public/api/gym/servicios'
+    
+    const method = servicioForm.value.id ? 'PUT' : 'POST'
+    
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: servicioForm.value.nombre,
+        costo: servicioForm.value.costo,
+        activo: servicioForm.value.activo
+      })
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Error al guardar el servicio')
+    }
+    
+    await Swal.fire({
+      icon: 'success',
+      title: servicioForm.value.id ? 'Servicio actualizado' : 'Servicio creado',
+      showConfirmButton: false,
+      timer: 1500
+    })
+    
+    document.getElementById('modalServicio').querySelector('.btn-close').click()
+    await cargarServicios()
+  } catch (error) {
+    mostrarError('Error al guardar el servicio', error)
+  }
+}
+
+async function cambiarEstadoServicio(id) {
+  try {
+    const servicio = servicios.value.find(s => s.id === id)
+    if (!servicio) return
+    
+    const result = await Swal.fire({
+      title: `¿${servicio.activo ? 'Desactivar' : 'Activar'} servicio?`,
+      text: `Estás a punto de ${servicio.activo ? 'desactivar' : 'activar'} este servicio`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: `Sí, ${servicio.activo ? 'desactivar' : 'activar'}`,
+      cancelButtonText: 'Cancelar'
+    })
+    
+    if (!result.isConfirmed) return
+    
+    const response = await fetch(`http://localhost:8080/backend/public/api/gym/servicios/estado/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Error al cambiar estado')
+    }
+    
+    await cargarServicios()
+    Swal.fire({
+      icon: 'success',
+      title: 'Estado actualizado',
+      showConfirmButton: false,
+      timer: 1500
+    })
+  } catch (error) {
+    mostrarError('Error al cambiar estado del servicio', error)
+  }
+}
+
+function mostrarError(titulo, error) {
+  console.error(error)
+  Swal.fire({
+    icon: 'error',
+    title: titulo,
+    text: error.message || 'Error desconocido',
+    timer: 3000
+  })
+}
+
+// Ciclo de vida
+let intervaloReloj = null
 
 onMounted(() => {
   actualizarFechaHora()
-  intervalo = setInterval(actualizarFechaHora, 1000)
+  intervaloReloj = setInterval(actualizarFechaHora, 1000)
   cargarServicios()
+  cargarServiciosVendidos()
 })
 
 onUnmounted(() => {
-  if (intervalo) clearInterval(intervalo)
+  if (intervaloReloj) clearInterval(intervaloReloj)
 })
 </script>
 

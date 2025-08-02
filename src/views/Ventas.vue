@@ -22,24 +22,48 @@
       <!-- Pestañas de tipos -->
       <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
-          <button class="nav-link" :class="{active: tabCatalogo==='general'}" @click="tabCatalogo='general'">General</button>
+          <button class="nav-link" :class="{active: tabCatalogo==='general'}"  @click="cambiarTab('general')">General</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link" :class="{active: tabCatalogo==='producto'}" @click="tabCatalogo='producto'">Productos</button>
+          <button class="nav-link" :class="{active: tabCatalogo==='producto'}"  @click="cambiarTab('producto')">Productos</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link" :class="{active: tabCatalogo==='servicio'}" @click="tabCatalogo='servicio'">Servicios</button>
+          <button class="nav-link" :class="{active: tabCatalogo==='servicio'}"  @click="cambiarTab('servicio')">Servicios</button>
         </li>
         <li class="nav-item">
-          <button class="nav-link" :class="{active: tabCatalogo==='paquete'}" @click="tabCatalogo='paquete'">Paquetes</button>
+          <button class="nav-link" :class="{active: tabCatalogo==='paquete'}"  @click="cambiarTab('paquete')">Paquetes</button>
         </li>
       </ul>
-      <input
-        v-model="busqueda"
-        type="text"
-        class="form-control mb-3"
-        placeholder="Buscar por nombre o ID..."
-      />
+
+     <!-- justo debajo de las pestañas -->
+<div class="mb-3">
+  <input
+    v-if="tabCatalogo==='general'"
+    v-model="searchGeneral"
+    placeholder="Buscar en General…"
+    class="form-control"
+  />
+  <input
+    v-else-if="tabCatalogo==='producto'"
+    v-model="searchProducto"
+    placeholder="Buscar Productos…"
+    class="form-control"
+  />
+  <input
+    v-else-if="tabCatalogo==='servicio'"
+    v-model="searchServicio"
+    placeholder="Buscar Servicios…"
+    class="form-control"
+  />
+  <input
+    v-else-if="tabCatalogo==='paquete'"
+    v-model="searchPaquete"
+    placeholder="Buscar Paquetes…"
+    class="form-control"
+  />
+</div>
+
+
       <div class="tabla-scroll">
         <table class="table table-hover tabla-clientes mb-0">
           <thead>
@@ -55,7 +79,7 @@
           <tbody>
             <tr
               v-for="(producto, i) in productosPaginados"
-              :key="producto.id"
+              :key="`${producto.id}-${producto.tipo}-${i}`"
               :class="{ 'text-decoration-line-through text-muted': producto.stock === 0 }"
             >
               <td>{{ producto.id }}</td>
@@ -204,12 +228,10 @@
                   aria-label="Selecciona cliente"
                 >
                   <option disabled value="">-- Selecciona cliente --</option>
-                  <option :disabled="ticket.some(item => item.tipo === 'servicio' || item.tipo === 'paquete')" value="general">General</option>
-                  <option
-                    v-for="c in clientes"
-                    :key="c.id"
-                    :value="c.id"
-                  >
+                  <option :disabled="ticket.some(item => item.tipo === 'servicio' || item.tipo === 'paquete')" value="general">
+                    General
+                  </option>
+                  <option v-for="c in clientes" :key="c.id" :value="c.id">
                     {{ c.nombre }}
                   </option>
                 </select>
@@ -220,22 +242,13 @@
                 >
                   <i class="material-icons">add</i>
                 </button>
-                <!-- Eliminar botón de agregar mascota cuando hay cliente o general seleccionado -->
               </div>
             </div>
-            <div class="mb-3">
-              <label class="form-label"><b>Observaciones:</b></label>
-              <input
-                v-model="observaciones"
-                type="text"
-                class="form-control"
-              />
-            </div>
-            <!-- Campo de método de pago eliminado, solo efectivo permitido -->
+            <!-- Método de pago: solo efectivo -->
             <hr />
             <p><strong>Subtotal:</strong> <span class="text-secondary">${{ subtotal }}</span></p>
             <p><strong>Descuento total:</strong> <span class="text-secondary">${{ descuentoTotal }}</span></p>
-            <h5><strong style="color: black;">Total a pagar:</strong> <span class="text-success">${{ total }}</span></h5>
+            <h5><strong style="color: #000;">Total a pagar:</strong> <span class="text-success">${{ total }}</span></h5>
           </div>
         </div>
       </div>
@@ -341,98 +354,11 @@
       </div>
     </div>
   </div>
-
-  <!-- Modal para agregar mascota -->
-  <div
-    class="modal fade"
-    id="mascotaModal"
-    tabindex="-1"
-    aria-labelledby="mascotaModalLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="mascotaModalLabel">Agregar Mascota</h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Cerrar"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Nombre</label>
-            <input
-              v-model="nuevaMascota.nombre"
-              type="text"
-              class="form-control"
-              placeholder="Ej. Luna"
-            />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Especie</label>
-            <input
-              v-model="nuevaMascota.especie"
-              type="text"
-              class="form-control"
-              placeholder="Ej. Perro"
-            />
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Edad</label>
-            <div class="input-group">
-              <input
-                v-model.number="nuevaMascota.edad"
-                type="number"
-                min="0"
-                class="form-control"
-              />
-              <select
-                v-model="nuevaMascota.unidad_edad"
-                class="form-select"
-              >
-                <option value="años">Años</option>
-                <option value="meses">Meses</option>
-              </select>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Raza</label>
-            <input
-              v-model="nuevaMascota.raza"
-              type="text"
-              class="form-control"
-              placeholder="Opcional"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="modal"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="guardarMascota"
-          >
-            Guardar
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </template>
+
 
 <script>
 import Navbar from '../components/Navbar.vue'
-// import jsPDF from 'jspdf'
-// import autoTable from 'jspdf-autotable'
 import Swal from 'sweetalert2'
 
 export default {
@@ -442,92 +368,85 @@ export default {
   data() {
     return {
       promociones: [],
-    aplicarPromocion(item) {
-      const promo = this.promociones.find(p => p.nombre === item.promocion)
-      if (promo) {
-        item.descuento = promo.descuento
-      } else {
-        item.descuento = 0
-      }
-      this.actualizarTotales()
-    },
-      busqueda: '',
       tabCatalogo: 'general',
+
+        searchGeneral: '',
+    searchProducto: '',
+    searchServicio: '',
+    searchPaquete: '',
+
       // clientes y selección
       clientes: [],
       selectedClienteId: '',
-      mascotasCliente: [], // Mascotas del cliente seleccionado
       clienteForm: {
         nombre: '',
         apellidoPaterno: '',
         apellidoMaterno: '',
-        edad: '',
-        telefono: '',
-        tieneMascota: false,
-        mascota: {
-          nombre: '',
-          especie: '',
-          edad: 0,
-          unidad_edad: 'años',
-          raza: ''
-        }
+        edad: null,
+        telefono: ''
       },
-      // datos de mascota para la venta
-      mascotaNombre: '',
-      mascotaEdad: 0,
-      mascotaUnidadEdad: 'años',
-      mascotaEspecie: '',
-      mascotaRaza: '',
+
       // venta
       observaciones: '',
-      metodoPago: 'efectivo',
       usuarioId: null,
+
       // catálogo y ticket
-      productos: [],
+      allProductos: [], // datos crudos del API
+      productos: [],    // copia visual, nunca se muta directamente fuera de cargarCatalogo
       ticket: [],
       paginaCatalogo: 1,
       productosPorPagina: 10,
       paginaTicket: 1,
       itemsPorTicket: 10,
+
       // reloj
       fecha: '',
       hora: '',
-      intervalo: null,
-      // nueva mascota
-      nuevaMascota: {
-        nombre: '',
-        especie: '',
-        raza: '',
-        edad: 0,
-        unidad_edad: 'años'
-      }
+      intervalo: null
+    }
+  },
+
+  watch: {
+    tabCatalogo() {
+      // limpia todos los searches
+      this.searchGeneral = ''
+      this.searchProducto = ''
+      this.searchServicio = ''
+      this.searchPaquete = ''
+      // vuelve a la primera página
+      this.paginaCatalogo = 1
     }
   },
 
   computed: {
     clienteSeleccionado() {
       if (this.selectedClienteId === 'general') {
-        return { id: 'general', nombre: 'General', telefono: '', correo: '', mascotas: [] }
+        return { id: 'general', nombre: 'General' }
       }
       return this.clientes.find(c => c.id === this.selectedClienteId) || {}
     },
-    productosFiltrados() {
-      const filtro = this.busqueda.toLowerCase()
-      let lista = this.productos
-      if (this.tabCatalogo !== 'general') {
-        lista = lista.filter(p => p.tipo === this.tabCatalogo)
-      }
-      return lista
-        .filter(
-          p =>
-            p.nombre.toLowerCase().includes(filtro) ||
-            (p.id && p.id.toString().includes(filtro))
+
+    searchTerm() {
+    switch (this.tabCatalogo) {
+      case 'producto': return this.searchProducto.trim().toLowerCase()
+      case 'servicio': return this.searchServicio.trim().toLowerCase()
+      case 'paquete':  return this.searchPaquete.trim().toLowerCase()
+      default:         return this.searchGeneral.trim().toLowerCase()
+    }
+    },
+     productosFiltrados() {
+      // Siempre filtra sobre allProductos
+      let lista = this.allProductos.filter(p =>
+        this.tabCatalogo === 'general' || p.tipo === this.tabCatalogo
+      )
+      if (this.searchTerm) {
+        lista = lista.filter(p =>
+          p.nombre.toLowerCase().includes(this.searchTerm) ||
+          String(p.id).includes(this.searchTerm)
         )
-        .sort((a, b) => {
-          const stockA = a.tipo === 'servicio' ? 1 : a.stock ?? 0
-          const stockB = b.tipo === 'servicio' ? 1 : b.stock ?? 0
-          return Number(stockB > 0) - Number(stockA > 0)
-        })
+      }
+      // Ordena por id ascendente
+      return lista.sort((a, b) => a.id - b.id)
     },
     productosPaginados() {
       const start = (this.paginaCatalogo - 1) * this.productosPorPagina
@@ -548,43 +467,53 @@ export default {
     },
     descuentoTotal() {
       return this.ticket.reduce(
-        (sum, item) =>
-          sum + item.precio * item.cantidad * (item.descuento / 100),
+        (sum, item) => sum + item.precio * item.cantidad * (item.descuento / 100),
         0
       )
     },
     total() {
       return (this.subtotal - this.descuentoTotal).toFixed(2)
-    },
-    hayServicioEnTicket() {
-      return this.ticket.some(item => item.tipo === 'Servicio')
     }
   },
 
-  watch: {
-    selectedClienteId(newVal) {
-      this.cargarMascotasCliente(newVal)
-      // Limpiar selección de mascota en servicios del ticket al cambiar cliente
-      this.ticket.forEach(item => {
-        if (item.tipo === 'Servicio') item.mascota_id = ''
-      })
-    }
+  mounted() {
+    this.usuarioId = 1
+    this.actualizarReloj()
+    this.intervalo = setInterval(this.actualizarReloj, 1000)
+    this.cargarCatalogo()
+    this.cargarClientes()
+    this.cargarPromociones()
   },
-
-    mounted() {
-      this.usuarioId = 1
-      this.actualizarReloj()
-      this.intervalo = setInterval(this.actualizarReloj, 1000)
-      this.cargarCatalogo()
-      this.cargarClientes()
-      this.cargarPromociones()
-    },
 
   beforeUnmount() {
     clearInterval(this.intervalo)
   },
 
   methods: {
+    aplicarPromocion(item) {
+      if (!item.promocion) {
+        item.descuento = 0;
+        return;
+      }
+      const promo = this.promociones.find(p => p.nombre === item.promocion);
+      if (promo && typeof promo.descuento === 'number') {
+        item.descuento = promo.descuento;
+      }
+    },
+
+     cambiarTab(tab) {
+    this.tabCatalogo = tab;
+    this.resetSearch();
+    this.paginaCatalogo = 1;
+  },
+  resetSearch() {
+    this.searchGeneral = '';
+    this.searchProducto = '';
+    this.searchServicio = '';
+    this.searchPaquete = '';
+  },
+
+
     actualizarReloj() {
       const ahora = new Date()
       this.fecha = ahora.toLocaleDateString('es-MX', {
@@ -600,110 +529,137 @@ export default {
       try {
         const res = await fetch('http://localhost:8080/backend/public/api/gym/promociones')
         if (!res.ok) throw new Error('No se pudo cargar las promociones')
-        const data = await res.json()
-        this.promociones = data
+        this.promociones = await res.json()
       } catch (e) {
-        Swal.fire('Error', e.message || 'No se pudo cargar las promociones', 'error')
+        Swal.fire('Error', e.message, 'error')
       }
     },
 
-    // clientes (local)
     async cargarClientes() {
       try {
         const res = await fetch('http://localhost:8080/backend/public/api/gym/clientes/paquetes')
         if (!res.ok) throw new Error('No se pudo cargar la lista de clientes')
         const data = await res.json()
-        // Normalizar: nombre completo, id, telefono, paquete, dias_restantes
         this.clientes = data.map(c => ({
           id: c.id_cliente,
           nombre: c.nombre_completo,
           edad: c.edad,
           telefono: c.telefono || '',
           paquete: c.paquete || '-',
-          dias_restantes: c.dias_restantes || '-',
+          dias_restantes: c.dias_restantes || '-'
         }))
       } catch (e) {
-        Swal.fire('Error', e.message || 'No se pudo cargar la lista de clientes', 'error')
+        Swal.fire('Error', e.message, 'error')
       }
-    },
-    openClienteModal() {
-      this.clienteForm = {
-        nombre: '',
-        telefono: '',
-        correo: '',
-        tieneMascota: false,
-        mascota: { nombre: '', especie: '', edad: 0, unidad_edad: 'años', raza: '' }
-      }
-      const modalEl = document.getElementById('clienteModal')
-      new bootstrap.Modal(modalEl).show()
-    },
-    guardarCliente() {
-      if (!this.clienteForm.nombre.trim() || !this.clienteForm.apellidoPaterno.trim() || !this.clienteForm.apellidoMaterno.trim() || !this.clienteForm.edad || !this.clienteForm.telefono.trim()) {
-        return Swal.fire('Error', 'Todos los campos son obligatorios', 'error')
-      }
-      // Generar nuevo id
-      const nuevoId = this.clientes.length ? Math.max(...this.clientes.map(c => c.id)) + 1 : 1
-      const nuevo = {
-        id: nuevoId,
-        nombre: this.clienteForm.nombre,
-        apellidoPaterno: this.clienteForm.apellidoPaterno,
-        apellidoMaterno: this.clienteForm.apellidoMaterno,
-        edad: this.clienteForm.edad,
-        telefono: this.clienteForm.telefono,
-        mascotas: []
-      }
-      // Si hay mascota
-      if (this.clienteForm.tieneMascota) {
-        const nuevaMascota = {
-          id: Date.now(),
-          ...this.clienteForm.mascota
-        }
-        nuevo.mascotas.push(nuevaMascota)
-      }
-      this.clientes.push(nuevo)
-      this.selectedClienteId = nuevo.id
-      bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide()
-      Swal.fire('Éxito', 'Cliente registrado', 'success')
-    },
-    cargarMascotasCliente(clienteId) {
-      if (!clienteId) {
-        this.mascotasCliente = []
-        return
-      }
-      const cliente = this.clientes.find(c => c.id === clienteId)
-      this.mascotasCliente = cliente && cliente.mascotas ? cliente.mascotas : []
     },
 
-    // catálogo (API)
+    openClienteModal() {
+    // Reinicia el formulario
+    this.clienteForm = {
+      nombre: '',
+      apellidoPaterno: '',
+      apellidoMaterno: '',
+      edad: null,
+      telefono: ''
+    }
+    // Abre el modal usando la misma instancia de Bootstrap que en tu función async
+    const modalEl = document.getElementById('clienteModal')
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show()
+  },
+
+  async guardarCliente() {
+    const { nombre, apellidoPaterno, apellidoMaterno, edad, telefono } = this.clienteForm
+    // Validación igual al método async de ejemplo
+    if (!nombre || !apellidoPaterno || !apellidoMaterno || !edad || !telefono) {
+      return Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Por favor completa todos los campos.'
+      })
+    }
+
+    try {
+      // Envía al backend
+      const response = await fetch('http://localhost:8080/backend/public/api/gym/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre,
+          apellido_paterno: apellidoPaterno,
+          apellido_materno: apellidoMaterno,
+          edad,
+          telefono
+        })
+      })
+      const data = await response.json()
+
+      if (response.ok) {
+        // Éxito: notifica, limpia y cierra modal
+        Swal.fire({
+          icon: 'success',
+          title: 'Cliente agregado',
+          text: data.mensaje || 'Cliente agregado correctamente',
+          showConfirmButton: false,
+          timer: 1200
+        })
+        this.clienteForm = {
+          nombre: '',
+          apellidoPaterno: '',
+          apellidoMaterno: '',
+          edad: null,
+          telefono: ''
+        }
+        const modalEl = document.getElementById('clienteModal')
+        window.bootstrap.Modal.getInstance(modalEl).hide()
+
+        // Recarga lista de clientes y opcionalmente selecciona el nuevo
+        await this.cargarClientes()
+        if (data.id_cliente) {
+          this.selectedClienteId = data.id_cliente
+        }
+      } else {
+        // Error de API
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.error || 'No se pudo agregar el cliente.'
+        })
+      }
+    } catch (error) {
+      // Error de conexión
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de conexión',
+        text: 'No se pudo conectar al servidor. Intenta más tarde.'
+      })
+    }
+  },
+
     async cargarCatalogo() {
       try {
         const res = await fetch('http://localhost:8080/backend/public/api/gym/general')
         if (!res.ok) throw new Error('No se pudo cargar el catálogo')
         const data = await res.json()
-        // Normalizar: precio a número, stock a número o undefined
-        this.productos = data.map(item => ({
+        this.allProductos = data.map(item => ({
           ...item,
           precio: Number(item.precio),
           stock: item.tipo === 'producto' ? Number(item.stock) : undefined,
           cantidad: 1,
           descuento: 0
         }))
+        this.productos = [...this.allProductos]
       } catch (e) {
-        Swal.fire('Error', e.message || 'No se pudo cargar el catálogo', 'error')
+        Swal.fire('Error', e.message, 'error')
       }
     },
 
     agregarAlTicket(producto) {
-      const esServicio = producto.tipo === 'servicio';
-      const esPaquete = producto.tipo === 'paquete';
+      const esServicio = producto.tipo === 'servicio'
+      const esPaquete = producto.tipo === 'paquete'
+
       if (esServicio) {
-        // Si estaba seleccionado 'General', lo deselecciona
-        if (this.selectedClienteId === 'general') {
-          this.selectedClienteId = '';
-        }
-        // Servicios siempre se agregan como una nueva línea, cantidad fija en 1
-        // Agregar campo fecha_servicio (por defecto hoy)
-        const hoy = new Date().toISOString().slice(0, 10);
+        if (this.selectedClienteId === 'general') this.selectedClienteId = ''
+        const hoy = new Date().toISOString().slice(0, 10)
         this.ticket.push({
           id: producto.id,
           nombre: producto.nombre,
@@ -711,26 +667,16 @@ export default {
           precio: producto.precio,
           cantidad: 1,
           descuento: 0,
-          mascota_id: '',
           fecha_servicio: hoy
-        });
-        return;
+        })
+        return
       }
+
       if (esPaquete) {
-        // Si estaba seleccionado 'General', lo deselecciona
-        if (this.selectedClienteId === 'general') {
-          this.selectedClienteId = '';
-        }
-        // Revisar si ya hay un paquete diferente en el ticket
-        const paqueteEnTicket = this.ticket.find(i => i.tipo === 'paquete' && i.id !== producto.id);
-        if (paqueteEnTicket) {
-          Swal.fire('Solo un paquete', 'No puedes elegir dos paquetes diferentes en el mismo ticket', 'warning');
-          return;
-        }
-        // Si ya existe el mismo paquete, aumentar cantidad
-        const existe = this.ticket.find(i => i.tipo === 'paquete' && i.id === producto.id);
+        if (this.selectedClienteId === 'general') this.selectedClienteId = ''
+        const existe = this.ticket.find(i => i.tipo === 'paquete' && i.id === producto.id)
         if (existe) {
-          existe.cantidad++;
+          existe.cantidad++
         } else {
           this.ticket.push({
             id: producto.id,
@@ -738,20 +684,22 @@ export default {
             tipo: producto.tipo,
             precio: producto.precio,
             cantidad: 1,
-            descuento: 0,
-            mascota_id: ''
-          });
+            descuento: 0
+          })
         }
-        return;
+        return
       }
-      // Productos
-      const existe = this.ticket.find(i => i.id === producto.id);
-      if (existe) {
+
+      // productos
+      const existeProd = this.ticket.find(i => i.id === producto.id)
+      if (existeProd) {
         if (producto.stock > 0) {
-          existe.cantidad++;
-          producto.stock--;
+          existeProd.cantidad++
+          // Actualiza stock solo en allProductos
+          const prodRef = this.allProductos.find(p => p.id === producto.id)
+          if (prodRef && prodRef.stock !== undefined) prodRef.stock--
         } else {
-          Swal.fire('Sin stock', `No hay stock de ${producto.nombre}`, 'warning');
+          Swal.fire('Sin stock', `No hay stock de ${producto.nombre}`, 'warning')
         }
       } else {
         this.ticket.push({
@@ -761,20 +709,23 @@ export default {
           precio: producto.precio,
           cantidad: 1,
           descuento: 0
-        });
-        if (producto.stock !== undefined) producto.stock--;
+        })
+        // Actualiza stock solo en allProductos
+        const prodRef = this.allProductos.find(p => p.id === producto.id)
+        if (prodRef && prodRef.stock !== undefined) prodRef.stock--
       }
     },
 
     calcularTotalLinea(item) {
-      let total = item.precio * item.cantidad;
-      total = total * (1 - (item.descuento || 0) / 100);
-      return total.toFixed(2);
+      let total = item.precio * item.cantidad
+      total *= 1 - (item.descuento || 0) / 100
+      return total.toFixed(2)
     },
 
     eliminarItem(idx) {
       const item = this.ticket[idx]
-      const prod = this.productos.find(p => p.id === item.id)
+      // Actualiza stock solo en allProductos
+      const prod = this.allProductos.find(p => p.id === item.id)
       if (prod && prod.stock !== undefined && item.tipo === 'producto') {
         prod.stock += item.cantidad
       }
@@ -785,120 +736,116 @@ export default {
       if (!this.selectedClienteId) {
         return Swal.fire('Error', 'Selecciona un cliente', 'error')
       }
-      // Validar que cada servicio tenga mascota seleccionada si hay mascotas disponibles
-      const serviciosSinMascota = this.ticket.filter(i => i.tipo === 'servicio' && this.mascotasCliente.length && !i.mascota_id)
-      if (serviciosSinMascota.length) {
-        return Swal.fire('Error', 'Selecciona una mascota para cada servicio', 'error')
-      }
 
-      let errores = []
+      const errores = []
 
-      // 1. Registrar ventas de productos
-      const productosVenta = this.ticket.filter(i => i.tipo === 'producto')
-      for (const item of productosVenta) {
-        // Validar stock antes de enviar
-        const producto = this.productos.find(p => p.id === item.id)
-        if (!producto || producto.stock < item.cantidad) {
+      // 1. Productos
+      for (const item of this.ticket.filter(i => i.tipo === 'producto')) {
+        const prod = this.productos.find(p => p.id === item.id)
+        if (!prod || prod.stock < item.cantidad) {
           errores.push(`Stock insuficiente para ${item.nombre}`)
           continue
         }
         try {
-          // Calcular total
           const total = (item.precio * item.cantidad * (1 - (item.descuento || 0) / 100)).toFixed(2)
-          // Registrar venta de producto
-          const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/productos', {
+          let res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/productos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               cantidad: item.cantidad,
               precio: total,
-              total: total,
+              total,
               descuento: item.descuento,
               id_producto: item.id
             })
           })
-          const data = await res.json()
+          let data = await res.json()
           if (!res.ok) {
             errores.push(data.error || `Error al vender ${item.nombre}`)
             continue
           }
-          // Actualizar stock en la base de datos
-          const nuevoStock = producto.stock - item.cantidad
-          const resStock = await fetch(`http://localhost:8080/backend/public/api/gym/productos/stock/${item.id}`, {
+          const nuevoStock = prod.stock - item.cantidad
+          res = await fetch(`http://localhost:8080/backend/public/api/gym/productos/stock/${item.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stock_actual: nuevoStock })
           })
-          const dataStock = await resStock.json()
-          if (!resStock.ok) {
-            errores.push(dataStock.error || `Error al actualizar stock de ${item.nombre}`)
-            continue
-          }
-        } catch (e) {
-          errores.push(`Error de red al vender o actualizar stock de ${item.nombre}`)
-        }
-      }
-
-      // 2. Registrar ventas de servicios
-      const serviciosVenta = this.ticket.filter(i => i.tipo === 'servicio')
-      for (const item of serviciosVenta) {
-        try {
-          const total = (item.precio * item.cantidad * (1 - (item.descuento || 0) / 100)).toFixed(2)
-          const body = {
-            cantidad: item.cantidad,
-            precio: total,
-            total: total,
-            descuento: item.descuento,
-            fecha: item.fecha_servicio,
-            id_servicio: item.id,
-            id_cliente: this.selectedClienteId
-          }
-          const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/servicios', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          })
-          const data = await res.json()
+          data = await res.json()
           if (!res.ok) {
-            errores.push(data.error || `Error al vender servicio ${item.nombre}`)
-            continue
+            errores.push(data.error || `Error al actualizar stock de ${item.nombre}`)
           }
-        } catch (e) {
-          errores.push(`Error de red al vender servicio ${item.nombre}`)
+        } catch {
+          errores.push(`Error de red con ${item.nombre}`)
         }
       }
 
-      // 3. Registrar venta de paquete (solo uno permitido en el ticket)
-      const paquete = this.ticket.find(i => i.tipo === 'paquete');
+// 2. Servicios
+for (const item of this.ticket.filter(i => i.tipo === 'servicio')) {
+  try {
+    const body = {
+      cantidad: item.cantidad,
+      precio: item.precio, // Precio unitario
+      descuento: item.descuento || 0,
+      id_servicio: item.id,
+      id_cliente: this.selectedClienteId,
+      fecha_agendada: item.fecha_servicio || null // Solo si es agendado
+    };
+    
+    const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/servicios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    
+    const data = await res.json();
+    if (!res.ok) {
+      errores.push(data.error || `Error al vender servicio ${item.nombre}`);
+    }
+  } catch (error) {
+    errores.push(`Error con servicio ${item.nombre}: ${error.message}`);
+  }
+}
+
+      // 3. Paquete
+      const paquete = this.ticket.find(i => i.tipo === 'paquete')
       if (paquete) {
+        // Buscar cliente seleccionado
+        const cliente = this.clientes.find(c => c.id === this.selectedClienteId)
+        if (cliente && Number(cliente.dias_restantes) > 0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'No se puede comprar paquete',
+            text: `El cliente ${cliente.nombre} aún tiene ${cliente.dias_restantes} días restantes de su membresía actual. Debe esperar a que caduque para activar otra.`
+          })
+          return;
+        }
         try {
           const total = (paquete.precio * paquete.cantidad * (1 - (paquete.descuento || 0) / 100)).toFixed(2)
-          // Buscar id_promocion si hay promoción seleccionada
-          let id_promocion = null;
+          let id_promocion = null
           if (paquete.promocion) {
-            const promo = this.promociones.find(p => p.nombre === paquete.promocion);
-            if (promo && promo.id) id_promocion = promo.id;
+            const promo = this.promociones.find(p => p.nombre === paquete.promocion)
+            if (promo?.id) id_promocion = promo.id
           }
           const body = {
             id_paquete: paquete.id,
             id_cliente: this.selectedClienteId,
             meses: paquete.cantidad,
             precio: total,
-            total: total,
+            total,
             descuento: paquete.descuento || 0,
-            id_promocion: id_promocion
-          };
+            id_promocion
+          }
           const res = await fetch('http://localhost:8080/backend/public/api/gym/ventas/paquetes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
-          });
-          const data = await res.json();
+          })
+          const data = await res.json()
           if (!res.ok) {
-            errores.push(data.error || `Error al vender paquete ${paquete.nombre}`);
+            errores.push(data.error || `Error al vender paquete ${paquete.nombre}`)
           }
-        } catch (e) {
-          errores.push(`Error de red al vender paquete ${paquete.nombre}`);
+        } catch {
+          errores.push(`Error de red con paquete ${paquete.nombre}`)
         }
       }
 
@@ -906,71 +853,32 @@ export default {
         Swal.fire('Error', errores.join('\n'), 'error')
         return
       }
+
       Swal.fire('¡Listo!', 'Venta registrada correctamente', 'success')
       this.cancelarVenta()
-      // Refrescar catálogo para actualizar stock
       this.cargarCatalogo()
     },
 
     cancelarVenta() {
       this.ticket.forEach(item => {
         if (item.tipo === 'producto') {
-          const prod = this.productos.find(p => p.id === item.id)
-          prod.stock += item.cantidad
+          // Actualiza stock solo en allProductos
+          const prod = this.allProductos.find(p => p.id === item.id)
+          if (prod && prod.stock !== undefined) prod.stock += item.cantidad
         }
       })
       this.ticket = []
       this.selectedClienteId = ''
-      this.mascotaNombre = ''
-      this.mascotaEspecie = ''
-      this.mascotaRaza = ''
-      this.mascotaEdad = 0
-      this.mascotaUnidadEdad = 'años'
       this.observaciones = ''
-      this.metodoPago = 'efectivo'
     },
-
-    // generarPDF eliminado
 
     actualizarTotales() {
       this.ticket = [...this.ticket]
-    },
-
-    // mascotas (local)
-    openMascotaModal() {
-      if (!this.selectedClienteId) {
-        return Swal.fire('Error', 'Selecciona un cliente primero', 'error')
-      }
-      this.nuevaMascota = {
-        nombre: '',
-        especie: '',
-        edad: 0,
-        unidad_edad: 'años',
-        raza: ''
-      }
-      const modalEl = document.getElementById('mascotaModal')
-      new bootstrap.Modal(modalEl).show()
-    },
-    guardarMascota() {
-      if (!this.nuevaMascota.nombre.trim() || !this.nuevaMascota.especie.trim()) {
-        return Swal.fire('Error', 'Nombre y especie son obligatorios', 'error')
-      }
-      const cliente = this.clientes.find(c => c.id === this.selectedClienteId)
-      if (cliente) {
-        const nuevaMascota = {
-          id: Date.now(),
-          ...this.nuevaMascota
-        }
-        if (!cliente.mascotas) cliente.mascotas = []
-        cliente.mascotas.push(nuevaMascota)
-        this.cargarMascotasCliente(this.selectedClienteId)
-        bootstrap.Modal.getInstance(document.getElementById('mascotaModal')).hide()
-        Swal.fire('Éxito', 'Mascota agregada', 'success')
-      }
     }
   }
 }
 </script>
+
 
 
 

@@ -84,7 +84,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-md-6 mb-3">
+                <!--<div class="col-md-6 mb-3">
                   <label class="form-label">Tipo de paquete</label>
                   <input type="text" class="form-control" value="Regular" readonly />
                 </div>
@@ -95,6 +95,7 @@
                     <option value="Inactivo">Inactivo</option>
                   </select>
                 </div>
+                -->
               </div>
             </div>
             <div class="modal-footer">
@@ -170,9 +171,10 @@
               <input v-model.number="paqueteDetalle.precio" type="number" step="0.01" class="form-control" placeholder="Ejemplo: 250.00" min="0" />
             </div>
             <div class="col-md-3 mb-3">
-              <label class="form-label">Duración</label>
+              <label class="form-label">Cantidad de días</label>
               <input v-model.number="paqueteDetalle.duracionCantidad" type="number" class="form-control" min="1" placeholder="Cantidad" />
             </div>
+            <!--
             <div class="col-md-3 mb-3">
               <label class="form-label">Unidad</label>
               <select v-model="paqueteDetalle.duracionUnidad" class="form-select">
@@ -181,6 +183,7 @@
                 <option value="Meses">Meses</option>
               </select>
             </div>
+            -->
             <div class="col-12 mb-3">
               <label class="form-label">Servicios incluidos</label>
               <div class="d-flex flex-wrap gap-2">
@@ -199,10 +202,11 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-6 mb-3">
+           <!-- <div class="col-md-6 mb-3">
               <label class="form-label">Tipo de paquete</label>
               <input type="text" class="form-control" value="Regular" readonly />
             </div>
+            -->
             <div class="col-md-6 mb-3" v-if="paqueteDetalle.tipoPaquete !== 'Regular'">
               <label class="form-label">Datos de promoción</label>
               <div class="input-group mb-2">
@@ -222,13 +226,13 @@
                 <input v-model="paqueteDetalle.fechaFin" type="date" class="form-control" />
               </div>
             </div>
-            <div class="col-md-6 mb-3">
+           <!-- <div class="col-md-6 mb-3">
               <label class="form-label">Estado</label>
               <select v-model="paqueteDetalle.estado" class="form-select">
                 <option value="Activo">Activo</option>
                 <option value="Inactivo">Inactivo</option>
               </select>
-            </div>
+            </div>-->
           </div>
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success me-2">Guardar cambios</button>
@@ -273,12 +277,15 @@ async function eliminarPaquete(id) {
   const paquete = paquetes.value.find(p => p.id === id)
   if (!paquete) return
   const accion = paquete.activo ? 'desactivar' : 'activar'
+  const title = paquete.activo ? '¿Seguro que deseas desactivar este paquete?' : '¿Seguro que deseas activar este paquete?'
+  const icon = paquete.activo ? 'warning' : 'question'
   const confirm = await Swal.fire({
-    title: `¿Seguro que deseas ${accion} este paquete?`,
-    icon: 'warning',
+    title,
+    icon,
     showCancelButton: true,
     confirmButtonText: `Sí, ${accion}`,
-    cancelButtonText: 'Cancelar'
+    cancelButtonText: 'Cancelar',
+    reverseButtons: true
   })
   if (!confirm.isConfirmed) return
 
@@ -349,24 +356,26 @@ async function guardarEdicionDetalle() {
         descripcion: paqueteDetalle.value.descripcion,
         precio: paqueteDetalle.value.precio,
         duracion: paqueteDetalle.value.duracionCantidad,
-        unidad: paqueteDetalle.value.duracionUnidad,
-        visita_unica: paqueteDetalle.value.visita_unica ?? false,
-        semana: paqueteDetalle.value.semana ?? false,
-        quincena: paqueteDetalle.value.quincena ?? false,
-        mensualidad_gym: paqueteDetalle.value.mensualidad_gym ?? false,
-        personal_trainer: paqueteDetalle.value.personal_trainer ?? false,
-        nutriologo: paqueteDetalle.value.nutriologo ?? false,
-        fisioterapia: paqueteDetalle.value.fisioterapia ?? false,
-        area_funcional: paqueteDetalle.value.area_funcional ?? false,
-        consulta_medica: paqueteDetalle.value.consulta_medica ?? false,
-        consulta_psicologica: paqueteDetalle.value.consulta_psicologica ?? false,
-        area_kids: paqueteDetalle.value.area_kids ?? false,
-        funcional_adultos: paqueteDetalle.value.funcional_adultos ?? false,
-        area_pesas: paqueteDetalle.value.area_pesas ?? false,
-        area_fisioterapia: paqueteDetalle.value.area_fisioterapia ?? false,
-        gym_general: paqueteDetalle.value.gym_general ?? false,
+        unidad: 'Días',
+        // Servicios
+        visita_unica: paqueteDetalle.value.serviciosIncluidos?.includes('Visita única') ?? false,
+        semana: paqueteDetalle.value.serviciosIncluidos?.includes('Semana') ?? false,
+        quincena: paqueteDetalle.value.serviciosIncluidos?.includes('Quincena') ?? false,
+        mensualidad_gym: paqueteDetalle.value.serviciosIncluidos?.includes('Mensualidad gym') ?? false,
+        personal_trainer: paqueteDetalle.value.serviciosIncluidos?.includes('Personal trainer') ?? false,
+        nutriologo: paqueteDetalle.value.serviciosIncluidos?.includes('Nutriólogo') ?? false,
+        fisioterapia: paqueteDetalle.value.serviciosIncluidos?.includes('Fisioterapia') ?? false,
+        area_funcional: paqueteDetalle.value.serviciosIncluidos?.includes('Área funcional') ?? false,
+        consulta_medica: paqueteDetalle.value.serviciosIncluidos?.includes('Consulta médica') ?? false,
+        consulta_psicologica: paqueteDetalle.value.serviciosIncluidos?.includes('Consulta psicológica') ?? false,
+        // Áreas
+        area_kids: paqueteDetalle.value.areasAcceso?.includes('Kids') ?? false,
+        funcional_adultos: paqueteDetalle.value.areasAcceso?.includes('Funcional adultos') ?? false,
+        area_pesas: paqueteDetalle.value.areasAcceso?.includes('Área de pesas') ?? false,
+        area_fisioterapia: paqueteDetalle.value.areasAcceso?.includes('Área de fisioterapia') ?? false,
+        gym_general: paqueteDetalle.value.areasAcceso?.includes('Gym general') ?? false,
         tipo_paquete: "Regular",
-        estado: paqueteDetalle.value.estado ?? true
+        estado: "True",
       })
     })
 
@@ -558,11 +567,12 @@ const paquetesFiltrados = computed(() => {
   }
 
   if (terminoBusquedaPaquete.value.trim()) {
-    const termino = terminoBusquedaPaquete.value.toLowerCase()
-    filtrados = filtrados.filter(p =>
-      p.nombre.toLowerCase().includes(termino) ||
-      p.area.toLowerCase().includes(termino)
-    )
+    const termino = terminoBusquedaPaquete.value.toLowerCase();
+    filtrados = filtrados.filter(p => {
+      const nombreMatch = p.nombre.toLowerCase().includes(termino);
+      const areasMatch = Array.isArray(p.areasAcceso) && p.areasAcceso.some(area => area.toLowerCase().includes(termino));
+      return nombreMatch || areasMatch;
+    });
   }
 
   return filtrados

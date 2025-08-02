@@ -369,11 +369,16 @@ const agregarCliente = () => {
 }
 
 function eliminarCliente(id) {
+  const promo = clientes.value.find(c => c.id === id)
+  if (!promo) return
+  const accion = promo.activo ? 'desactivar' : 'activar'
+  const title = promo.activo ? '¿Seguro que deseas desactivar esta promoción?' : '¿Seguro que deseas activar esta promoción?'
+  const icon = promo.activo ? 'warning' : 'question'
   Swal.fire({
-    title: '¿Seguro que deseas desactivar esta promoción?',
-    icon: 'warning',
+    title,
+    icon,
     showCancelButton: true,
-    confirmButtonText: 'Sí, desactivar',
+    confirmButtonText: `Sí, ${accion}`,
     cancelButtonText: 'Cancelar',
     reverseButtons: true
   }).then(async result => {
